@@ -2,6 +2,6 @@ import type { ReactNode } from 'react';
 
 type Props = { title?: ReactNode; description?: ReactNode };
 
-export function ReminderBanner({ title = '오늘 꼭 챙겨야 할 재료가 있어요', description = <>소비기한이 지난 재료는 상태를 확인하고,<br />임박한 재료로 메뉴를 추천받아 보세요.</> }: Props) {
+export function ReminderBanner({ title = '식재료를 간편하게 등록해 보세요', description = <>원하는 방법으로 식재료를 등록하고,<br />냉장고 속 재료를 편리하게 관리해 보세요</> }: Props) {
   return <div className="welcome-banner"><h2>{title}</h2><p>{description}</p></div>;
 }
