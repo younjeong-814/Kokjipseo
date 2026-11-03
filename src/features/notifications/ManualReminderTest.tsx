@@ -3,7 +3,7 @@ import { supabase } from '../cloud/client';
 import { ActionButton } from '../../components/ActionButton';
 
 type Target = { user_id:string; ingredients:number; expired:number; eligible:number };
-type Result = { mode:string; sent:number; failed:number; cancelled:number; users?:Record<string,{sent:number;failed:number;cancelled:number}> };
+type Result = { mode:string; sent:number; failed:number; cancelled:number; sentIngredients?:number; users?:Record<string,{sent:number;failed:number;cancelled:number}> };
 async function call(action:'status'|'inspect'|'run') {
   if(!supabase)throw new Error('계정 연결을 확인해 주세요.');
   const {data:session}=await supabase.auth.getSession();
@@ -37,10 +37,10 @@ export function ManualReminderTest() {
       <p role="status">내 계정 · 발송 대기 {count}건</p>
       <div className="manual-reminder-table"><table><caption>내 냉장고 알림 대상 검사 결과</caption><thead><tr><th>계정 ID</th><th>보관</th><th>기한 경과</th><th>발송 대기</th></tr></thead><tbody>{targets.map(row=><tr key={row.user_id}><th scope="row" title={row.user_id}>{row.user_id.slice(0,8)}</th><td>{row.ingredients}</td><td>{row.expired}</td><td>{row.eligible}</td></tr>)}</tbody></table></div>
       {!ready&&<p>발송 연결 또는 서버의 발송 허용 설정이 준비되지 않았어요. 검사는 가능하지만 메일은 보내지 않아요.</p>}
-      <p>아래 버튼을 누르면 내 계정의 인증된 알림 이메일로 실제 메일을 보냅니다. 한 번에 최대 25건을 처리하며, 1분 간격으로 실행할 수 있어요.</p>
+      <p>아래 버튼을 누르면 내 계정의 인증된 알림 이메일로 실제 메일을 보냅니다. D-Day·D-1·D-3 대상 재료를 한 통으로 모아 보내며, 1분 간격으로 실행할 수 있어요.</p>
       <ActionButton disabled={busy||!ready||count===0} onClick={()=>void run()}>내 알림 이메일로 테스트 발송</ActionButton>
     </>}
-    {result&&<div role="status"><p>발송 요청 성공 {result.sent}건 · 실패 {result.failed}건 · 조건 변경으로 제외 {result.cancelled}건</p><p>성공은 메일 제공자의 접수 기준입니다. 수신함에서도 확인해 주세요. 남은 대상을 확인하려면 다시 검사해 주세요.</p>{result.users&&<ul>{Object.entries(result.users).map(([id,row])=><li key={id} title={id}>{id.slice(0,8)}: 성공 {row.sent} · 실패 {row.failed} · 제외 {row.cancelled}</li>)}</ul>}</div>}
+    {result&&<div role="status"><p>메일 발송 성공 {result.sent}통 · 실패 {result.failed}통 · 포함 재료 {result.sentIngredients??0}개 · 제외 {result.cancelled}개</p><p>성공은 메일 제공자의 접수 기준입니다. 수신함에서도 확인해 주세요. 남은 대상을 확인하려면 다시 검사해 주세요.</p>{result.users&&<ul>{Object.entries(result.users).map(([id,row])=><li key={id} title={id}>{id.slice(0,8)}: 성공 {row.sent} · 실패 {row.failed} · 제외 {row.cancelled}</li>)}</ul>}</div>}
     {error&&<p role="alert">{error}</p>}
   </section>;
 }

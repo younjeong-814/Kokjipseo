@@ -8,8 +8,8 @@ const DAYS_LEFT:Record<string,number>={'3_days':3,'1_day':1,'due_today':0};
 export function createResendTransport(env:Env,fetcher:typeof fetch=fetch):MailTransport|null{
   if(!env.RESEND_API_KEY||!env.EMAIL_FROM)return null;
   return async(mail,idempotencyKey)=>{
-    if(mail.kind!=='reminder')throw new Error('unsupported_mail_kind');
-    const message=renderReminderEmail({to:mail.to,ingredients:[{name:mail.name,expiryDate:mail.expiryDate}],daysLeft:DAYS_LEFT[mail.reminderType]});
+    if(mail.kind!=='reminder'&&mail.kind!=='reminder-digest')throw new Error('unsupported_mail_kind');
+    const message=renderReminderEmail({to:mail.to,ingredients:mail.kind==='reminder-digest'?mail.ingredients:[{name:mail.name,expiryDate:mail.expiryDate,daysLeft:DAYS_LEFT[mail.reminderType]}]});
     const response=await fetcher('https://api.resend.com/emails',{method:'POST',
       // Resend deduplicates the same key for 24h, so a retried delivery is not sent twice.
       headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':idempotencyKey},

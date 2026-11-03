@@ -23,7 +23,8 @@ test('local SMTP attempt log deduplicates across new transport instances without
   await createLocalTestTransport(env,options)(mail,'reminder:1');
   await createLocalTestTransport(env,options)(mail,'reminder:1');
   assert.equal(calls,1);
-  const record=readFileSync(join(path,readdirSync(path)[0]),'utf8');assert.deepEqual(JSON.parse(record),{accepted:true});assert.ok(!record.includes('@'));
+  const record=readFileSync(join(path,readdirSync(path)[0]),'utf8');assert.equal(JSON.parse(record).accepted,true);assert.match(JSON.parse(record).fingerprint,/^[a-f0-9]{64}$/);assert.ok(!record.includes('@'));
+  await assert.rejects(()=>createLocalTestTransport(env,options)({...mail,to:'changed@example.com'},'reminder:1'),/previous_attempt_requires_review/);
 });
 test('uncertain SMTP failure never resends automatically even after creating another transport',async t=>{
   const path=directory(t);let calls=0;
