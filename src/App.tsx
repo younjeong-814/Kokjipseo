@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStorage } from './features/cloud/StorageContext';
 import { useSavedRecipes } from './features/cloud/SavedRecipes';
 import { BottomNavigation } from './components/BottomNavigation';
-import { StatusBar } from './components/StatusBar';
 
 import { TopHeader } from './components/TopHeader';
 import { HomePage } from './features/home/HomePage';
@@ -136,7 +135,7 @@ export function App() {
     return <div className="app-shell"><RecipeResults key={JSON.stringify(names)} ingredients={names} selectionContext={{ selected, onBack: () => navigate('recipe'), onReselect: () => navigate('recipe') }} renderResults={(data, pagination) => <><RecipeResultsPage total={data.total} recipes={data.recipes.map(recipe => toRecipeSummary(recipe, names))} selectedIngredients={selected.map(item => item.name)} onBack={() => navigate('recipe')} onOpen={id => { const recipe = data.recipes.find(item => item.id === id); if (recipe) { setOpenedRecipe(recipe); window.location.hash = `recipe-detail?recipe=${encodeURIComponent(id)}`; } }} footer={<footer className="recipe-results-footer">{pagination}<p className="recipe-source">출처: 농림수산식품교육문화정보원</p></footer>} /></>} /><BottomNavigation screen={screen} navigate={navigate} /></div>;
   }
   if (screen === 'settings') {
-    return <div className="app-shell screen-settings"><StatusBar /><SettingsPage onBack={() => navigate('mypage')} /></div>;
+    return <div className="app-shell screen-settings"><SettingsPage onBack={() => navigate('mypage')} /></div>;
   }
   if (screen === 'weekly-report') {
     return <div className="app-shell"><WeeklyReportPage period={managedPeriod} report={buildWeeklyReport(ingredients.items, loadHistory(storage), new Date(), managedPeriod)} onBack={() => navigate('mypage')} /><BottomNavigation screen={screen} navigate={navigate} /></div>;
