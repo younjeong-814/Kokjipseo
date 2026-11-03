@@ -54,8 +54,9 @@ else{
 }
 if(!groups.length){console.log('소비기한이 3일·1일 남았거나 오늘까지인 재료가 없어서 보낼 메일이 없어요.');process.exit(0);}
 
+const digestIngredients=groups.flatMap(group=>group.ingredients.map(item=>({...item,daysLeft:group.daysLeft})));
 mkdirSync('dist-email',{recursive:true});
-writeFileSync('dist-email/reminder-preview.html',renderReminderEmail({to:to??'preview@example.com',...groups[0]}).html);
+writeFileSync('dist-email/reminder-preview.html',renderReminderEmail({to:to??'preview@example.com',ingredients:digestIngredients}).html);
 console.log('미리보기: dist-email/reminder-preview.html');
 if(!to)process.exit(0);
 
@@ -64,18 +65,11 @@ if(gmail){
   const {GMAIL_USER:user,GMAIL_APP_PASSWORD:pass}=process.env;
   if(!user||!pass){console.error('.env.local에 GMAIL_USER와 GMAIL_APP_PASSWORD를 넣어 주세요.');process.exit(1);}
   const smtp=nodemailer.createTransport({host:'smtp.gmail.com',port:465,secure:true,auth:{user,pass:pass.replaceAll(' ','')}});
-  for(const group of groups){
-    const message=renderReminderEmail({to,...group});
-    await smtp.sendMail({from:`콕집서 <${user}>`,to,subject:message.subject,html:message.html,text:message.text});
-    console.log(`보냄: ${message.subject} (${group.ingredients.map(item=>item.name).join(', ')})`);
-  }
+  const message=renderReminderEmail({to,ingredients:digestIngredients});
+  await smtp.sendMail({from:`콕집서 <${user}>`,to,subject:message.subject,html:message.html,text:message.text});
+  console.log(`보냄: ${message.subject} (식재료 ${digestIngredients.length}개 · 1통)`);
 }else{
-  // 실제 worker처럼 재료 하나당 한 통.
   const transport=createResendTransport(process.env);
   if(!transport){console.error('.env.local에 RESEND_API_KEY와 EMAIL_FROM을 넣어 주세요.');process.exit(1);}
-  for(const {daysLeft,ingredients} of groups)for(const item of ingredients){
-    await transport({kind:'reminder',to,...item,ingredientId:'manual-test',deliveryId:'manual-test',reminderType:REMINDER_TYPES[daysLeft]},`manual-test:${Date.now()}:${item.name}`);
-    console.log(`보냄: ${item.name} (${daysLeft}일)`);
-  }
-}
-console.log(`${to}로 발송 요청을 보냈어요. 받은편지함(스팸함 포함)을 확인해 주세요.`);
+  await transport({kind:'reminder-digest',to,ingredients:digestIngredients.map((item,index)=>({...item,ingredientId:String(index),deliveryId:String(index)}))},`manual-test-digest:${Date.now()}`);
+  console.log(`보냄: 식재료 ${digestIngredients.length}개 · 1통`);

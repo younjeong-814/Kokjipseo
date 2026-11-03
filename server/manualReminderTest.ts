@@ -11,18 +11,19 @@ import type { MailTransport } from '../supabase/functions/_shared/emailNotificat
 export function createLocalTestTransport(env:Record<string,string>,options:{directory?:string;send?:(message:Record<string,string>)=>Promise<unknown>}={}):MailTransport|null {
   if(!env.GMAIL_USER||!env.GMAIL_APP_PASSWORD)return null;
   return async(mail,key)=>{
-    if(mail.kind!=='reminder')throw new Error('reminder_only');
+    if(mail.kind!=='reminder'&&mail.kind!=='reminder-digest')throw new Error('reminder_only');
     const directory=options.directory??'.local-mail-attempts';
     mkdirSync(directory,{recursive:true});
     const file=`${directory}/${createHash('sha256').update(key).digest('hex')}.json`;
-    try { if(JSON.parse(readFileSync(file,'utf8')).accepted)return; throw new Error('uncertain_previous_attempt'); }
+    const fingerprint=createHash('sha256').update(JSON.stringify(mail)).digest('hex');
+    try { const previous=JSON.parse(readFileSync(file,'utf8'));if(previous.accepted&&previous.fingerprint===fingerprint)return; throw new Error('uncertain_previous_attempt'); }
     catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw new Error('previous_attempt_requires_review');}
-    writeFileSync(file,JSON.stringify({accepted:false}),{flag:'wx'});
+    writeFileSync(file,JSON.stringify({accepted:false,fingerprint}),{flag:'wx'});
     const days:Record<string,number>={'3_days':3,'1_day':1,'due_today':0};
-    const message=renderReminderEmail({to:mail.to,ingredients:[{name:mail.name,expiryDate:mail.expiryDate}],daysLeft:days[mail.reminderType]});
+    const message=renderReminderEmail({to:mail.to,ingredients:mail.kind==='reminder-digest'?mail.ingredients:[{name:mail.name,expiryDate:mail.expiryDate,daysLeft:days[mail.reminderType]}]});
     const send=options.send??((value:Record<string,string>)=>createRequire(import.meta.url)('nodemailer').createTransport({host:'smtp.gmail.com',port:465,secure:true,auth:{user:env.GMAIL_USER,pass:env.GMAIL_APP_PASSWORD.replaceAll(' ','')},connectionTimeout:10000,socketTimeout:20000}).sendMail(value));
     await send({from:`콕집서 <${env.GMAIL_USER}>`,to:mail.to,subject:message.subject,html:message.html,text:message.text});
-    writeFileSync(file,JSON.stringify({accepted:true}));
+    writeFileSync(file,JSON.stringify({accepted:true,fingerprint}));
   };
 }
 export function manualReminderTestMiddleware(values:Record<string,string>) {

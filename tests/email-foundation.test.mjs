@@ -28,11 +28,11 @@ test('self-test authenticates each account before scoped queries; never sends wh
 test('manual entry uses the same worker ledger, recheck and stable idempotency key',async()=>{
  const env={SUPABASE_URL:'https://test.supabase.co',SUPABASE_ANON_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'server',EMAIL_MANUAL_TEST_ENABLED:'true',EMAIL_MANUAL_TEST_USER_IDS:'tester',EMAIL_CRON_SECRET:'cron',EMAIL_DISPATCH_ENABLED:'true'};
  const calls=[],sent=[];
- const fetcher=async url=>{calls.push(url);return Response.json(url.includes('/auth/')?{id:'tester',is_anonymous:false}:url.endsWith('claim_email_manual_test_run_for_user')?true:url.endsWith('claim_email_deliveries_for_user_now')?[{id:'delivery',user_id:'tester',lease_token:'lease'}]:url.endsWith('prepare_email_delivery')?{email:'owner@example.com',name:'두부',expiryDate:'2026-11-03',ingredientId:'ingredient',deliveryId:'delivery',reminderType:'3_days'}:1);};
+ const fetcher=async url=>{calls.push(url);return Response.json(url.includes('/auth/')?{id:'tester',is_anonymous:false}:url.endsWith('claim_email_manual_test_run_for_user')?true:url.endsWith('claim_email_digest_deliveries')?[{id:'delivery',user_id:'tester',digest_id:'digest',lease_token:'lease'}]:url.endsWith('prepare_email_digest')?{email:'owner@example.com',userId:'tester',ingredients:[{name:'두부',expiryDate:'2026-11-03',ingredientId:'ingredient',deliveryId:'delivery',daysLeft:3}]}:1);};
  const handler=createManualReminderTest(env,async(mail,key)=>sent.push({mail,key}),fetcher);
  const result=await(await handler(new Request('https://test',{method:'POST',headers:{Authorization:'Bearer session'},body:'{"action":"run"}'}))).json();
- assert.equal(result.sent,1);assert.equal(result.users.tester.sent,1);assert.equal(sent[0].key,'reminder:delivery');assert.equal(sent[0].mail.to,'owner@example.com');
- assert.ok(calls.some(url=>url.endsWith('prepare_email_delivery')));assert.ok(calls.some(url=>url.endsWith('finish_email_delivery')));
+ assert.equal(result.sent,1);assert.equal(result.users.tester.sent,1);assert.equal(sent[0].key,'reminder-digest:digest');assert.equal(sent[0].mail.to,'owner@example.com');
+ assert.ok(calls.some(url=>url.endsWith('prepare_email_digest')));assert.ok(calls.some(url=>url.endsWith('finish_email_digest')));
  assert.ok(!JSON.stringify(result).includes('owner@example.com'));
 });
 test('self-test never accepts a client supplied account or recipient and binds all RPCs to Auth user',async()=>{
@@ -91,7 +91,7 @@ before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.uid() to anon,authenticated,service_role;`);
- for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+ for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
 });
 after(()=>db.close());
@@ -201,7 +201,7 @@ test('worker rejects browser token; planning-only never claims or marks sent; di
  assert.deepEqual(await (await worker(cron())).json(),{mode:'planning-only',planned:3,sent:0});assert.equal(calls.length,1);
  let sent=0;calls=[];
  const active=createReminderWorker({...env,EMAIL_DISPATCH_ENABLED:'true'},async()=>{sent++;},async url=>{
-  calls.push(url);return Response.json(url.endsWith('claim_email_deliveries')?[{id:reqid,lease_token:'lease'}]:url.endsWith('prepare_email_delivery')?null:0);
+  calls.push(url);return Response.json(url.endsWith('claim_email_digest_deliveries')?[{id:reqid,digest_id:'digest',user_id:'owner',lease_token:'lease'}]:url.endsWith('prepare_email_digest')?null:0);
  });
  const result=await (await active(cron())).json();assert.equal(sent,0);assert.equal(result.cancelled,1);assert.equal(calls.some(u=>u.endsWith('finish_email_delivery')),false);
 });
@@ -213,11 +213,11 @@ test('Resend transport stays off without secrets and sends the rendered reminder
  await transport({kind:'reminder',to:'tester@example.com',name:'두부',expiryDate:'2026-11-03',ingredientId:ingredient,deliveryId:reqid,reminderType:'3_days'},'reminder:x');
  const body=JSON.parse(calls[0].init.body);
  assert.equal(calls[0].url,'https://api.resend.com/emails');assert.equal(calls[0].init.headers['Idempotency-Key'],'reminder:x');
- assert.deepEqual(body.to,['tester@example.com']);assert.match(body.html,/두부/);assert.match(body.subject,/3일 남은/);
+ assert.deepEqual(body.to,['tester@example.com']);assert.match(body.html,/두부/);assert.equal(body.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');
  await transport({kind:'reminder',to:'tester@example.com',name:'두부',expiryDate:'2026-11-03',ingredientId:ingredient,deliveryId:reqid,reminderType:'1_day'},'reminder:y');
- assert.match(JSON.parse(calls[1].init.body).subject,/1일 남은/);
+ assert.equal(JSON.parse(calls[1].init.body).subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');
  await transport({kind:'reminder',to:'tester@example.com',name:'두부',expiryDate:'2026-11-03',ingredientId:ingredient,deliveryId:reqid,reminderType:'due_today'},'reminder:z');
- const today=JSON.parse(calls[2].init.body);assert.match(today.subject,/오늘까지인/);assert.match(today.text,/오늘까지인/);assert.doesNotMatch(today.html,/3일 남은/);
+ const today=JSON.parse(calls[2].init.body);assert.equal(today.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');assert.match(today.text,/D-Day/);assert.doesNotMatch(today.html,/3일 남은/);
  const failing=createResendTransport({RESEND_API_KEY:'k',EMAIL_FROM:'a@example.com'},async()=>new Response('{}',{status:422}));
  await assert.rejects(()=>failing({kind:'reminder',to:'t@example.com',name:'x',expiryDate:'2026-11-03',ingredientId:ingredient,deliveryId:reqid,reminderType:'3_days'},'k'),/provider_422/);
 });
@@ -240,8 +240,8 @@ test('reminder mail carries each user own address, ingredient name and expiry da
  const today=(await db.query("select to_char((now() at time zone 'Asia/Seoul')::date,'YYYY-MM-DD') as d")).rows[0].d;
  const tomorrow=(await db.query("select to_char((now() at time zone 'Asia/Seoul')::date+1,'YYYY-MM-DD') as d")).rows[0].d;
  const c=sent.find(m=>m.to[0]==='user-c@example.com'),d=sent.find(m=>m.to[0]==='user-d@example.com');
- assert.match(c.html,/청송사과/);assert.match(c.html,new RegExp(`${tomorrow}까지`));assert.match(c.subject,/1일 남은/);assert.doesNotMatch(c.html,/시금치/);
- assert.match(d.html,/시금치/);assert.match(d.html,new RegExp(`${today}까지`));assert.match(d.subject,/오늘까지인/);assert.doesNotMatch(d.html,/청송사과/);
+ assert.match(c.html,/청송사과/);assert.match(c.html,new RegExp(`${tomorrow}까지`));assert.equal(c.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');assert.doesNotMatch(c.html,/시금치/);
+ assert.match(d.html,/시금치/);assert.match(d.html,new RegExp(`${today}까지`));assert.equal(d.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');assert.doesNotMatch(d.html,/청송사과/);
 });
 
 test('email settings move from the temporary account to an already-linked Google account with a one-time ticket',async()=>{
@@ -330,4 +330,61 @@ test('self-test DB schedules, inspects, claims and rate limits only the requeste
   assert.equal((await db.query('select public.claim_email_manual_test_run_for_user($1) as ok',[b])).rows[0].ok,true);
   assert.equal((await db.query("select has_function_privilege('service_role','public.claim_email_deliveries_now()','execute') as ok")).rows[0].ok,false);
  }finally{await db.exec('rollback');}
+});
+
+test('digests combine all deadlines for one owner, remain stable after a crash, and finish atomically',async()=>{
+ await db.exec('begin');try{
+  const owner='b1000000-0000-4000-8000-000000000001';await db.query('insert into auth.users values($1)',[owner]);
+  await db.query("insert into public.email_notification_settings(user_id,email,email_verified_at,enabled,consent_at,consent_version) values($1,'digest@example.com',now(),true,now(),'email-reminders-v1')",[owner]);
+  for(const [name,days] of [['두부',0],['대파',1],['우유',1],['양배추',3],['대상 아님',5]]){
+   const id=crypto.randomUUID();await db.query("insert into public.ingredients(id,user_id,name,category,expiry_date,payload) values($1::uuid,$2::uuid,$3,'채소',(now() at time zone 'Asia/Seoul')::date+$4::int,jsonb_build_object('id',$1::text,'name',$3::text,'category','채소'))",[id,owner,name,days]);
+  }
+  await db.query('select public.refresh_email_notification_schedule_for_user($1)',[owner]);
+  const first=(await db.query('select * from public.claim_email_digest_deliveries($1,true)',[owner])).rows;
+  assert.equal(first.length,4);assert.equal(new Set(first.map(row=>row.digest_id)).size,1);
+  let mail=(await db.query('select public.prepare_email_digest($1,$2) as mail',[first[0].digest_id,first[0].lease_token])).rows[0].mail;
+  assert.equal(mail.email,'digest@example.com');assert.deepEqual(mail.ingredients.map(item=>item.daysLeft),[0,1,1,3]);
+  const rendered=load('../supabase/functions/_shared/emailTemplates.ts').renderReminderEmail({to:mail.email,ingredients:mail.ingredients});
+  assert.equal(rendered.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');assert.match(rendered.html,/총 4개/);assert.doesNotMatch(rendered.html,/대상 아님/);
+  assert.ok(rendered.html.indexOf('D-Day')<rendered.html.indexOf('D-1'));assert.ok(rendered.html.indexOf('D-1')<rendered.html.indexOf('D-3'));
+  await db.query("update public.email_notification_deliveries set lease_until=now()-interval '1 minute' where user_id=$1",[owner]);
+  const retry=(await db.query('select * from public.claim_email_digest_deliveries($1,true)',[owner])).rows;
+  assert.equal(retry.length,4);assert.ok(retry.every(row=>row.digest_id===first[0].digest_id));
+  await db.query('select public.finish_email_digest($1,$2,true)',[retry[0].digest_id,retry[0].lease_token]);
+  assert.equal((await db.query("select count(*)::int as n from public.email_notification_deliveries where user_id=$1 and status='sent'",[owner])).rows[0].n,4);
+  assert.equal((await db.query('select * from public.claim_email_digest_deliveries($1,true)',[owner])).rows.length,0);
+ }finally{await db.exec('rollback');}
+});
+
+test('email template groups names safely and never includes absent deadline sections',()=>{
+ const {renderReminderEmail}=load('../supabase/functions/_shared/emailTemplates.ts');
+ const mail=renderReminderEmail({to:'test@example.com',ingredients:[{name:'<script>두부</script>',expiryDate:'2026-11-03',daysLeft:1},{name:'우유',expiryDate:'2026-11-03',daysLeft:1}]});
+ assert.equal(mail.subject,'[콕집서] 냉장고 속 재료를 확인해 주세요');assert.match(mail.html,/총 2개/);assert.match(mail.html,/&lt;script&gt;/);assert.doesNotMatch(mail.html,/<script>/);assert.doesNotMatch(mail.html,/D-Day|D-3/);assert.match(mail.text,/D-1/);
+});
+
+test('more than 25 ingredients from one account stay in one digest and opt-out cancels the whole unsent digest',async()=>{
+ await db.exec('begin');try{
+  const owner='b2000000-0000-4000-8000-000000000001';await db.query('insert into auth.users values($1)',[owner]);
+  await db.query("insert into public.email_notification_settings(user_id,email,email_verified_at,enabled,consent_at,consent_version) values($1,'many@example.com',now(),true,now(),'email-reminders-v1')",[owner]);
+  for(let i=0;i<32;i++){const id=crypto.randomUUID();await db.query("insert into public.ingredients(id,user_id,name,category,expiry_date,payload) values($1::uuid,$2::uuid,$3,'채소',(now() at time zone 'Asia/Seoul')::date+1,jsonb_build_object('id',$1::text,'name',$3::text,'category','채소'))",[id,owner,'재료'+i]);}
+  await db.query('select public.refresh_email_notification_schedule_for_user($1)',[owner]);
+  const jobs=(await db.query('select * from public.claim_email_digest_deliveries($1,true)',[owner])).rows;
+  assert.equal(jobs.length,32);assert.equal(new Set(jobs.map(row=>row.digest_id)).size,1);
+  await db.query('update public.email_notification_settings set enabled=false where user_id=$1',[owner]);
+  assert.equal((await db.query('select public.prepare_email_digest($1,$2) as mail',[jobs[0].digest_id,jobs[0].lease_token])).rows[0].mail,null);
+ }finally{await db.exec('rollback');}
+});
+
+test('worker sends one digest per account, not one per ingredient',async()=>{
+ const jobs=[{id:'a1',user_id:'a',digest_id:'a-digest',lease_token:'a-lease'},{id:'a2',user_id:'a',digest_id:'a-digest',lease_token:'a-lease'},{id:'b1',user_id:'b',digest_id:'b-digest',lease_token:'b-lease'}];
+ const sent=[],finished=[];
+ const fetcher=async(url,options)=>{
+  const input=JSON.parse(options.body);
+  if(url.endsWith('claim_email_digest_deliveries'))return Response.json(jobs);
+  if(url.endsWith('prepare_email_digest')){const userId=input.p_digest_id==='a-digest'?'a':'b';return Response.json({userId,email:userId+'@example.com',ingredients:jobs.filter(job=>job.user_id===userId).map(job=>({name:job.id,expiryDate:'2026-11-03',daysLeft:1,ingredientId:job.id,deliveryId:job.id}))});}
+  if(url.endsWith('finish_email_digest'))finished.push(input);return Response.json(1);
+ };
+ const worker=createReminderWorker({SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'service',EMAIL_CRON_SECRET:'cron',EMAIL_DISPATCH_ENABLED:'true'},async(mail,key)=>sent.push({mail,key}),fetcher);
+ const result=await(await worker(new Request('https://test',{method:'POST',headers:{'x-cron-secret':'cron'}}))).json();
+ assert.equal(result.sent,2);assert.equal(result.sentIngredients,3);assert.equal(sent.length,2);assert.equal(sent[0].mail.ingredients.length,2);assert.equal(sent[1].mail.ingredients.length,1);assert.equal(sent[0].mail.to,'a@example.com');assert.equal(sent[1].mail.to,'b@example.com');assert.equal(finished.length,2);
 });
