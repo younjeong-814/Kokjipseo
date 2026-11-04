@@ -40,7 +40,6 @@
 .settings-sync-status.has-error { background:#fff1f4; color:var(--red-500); }
 
 /* Figma 6392:6690 — anonymous account settings and email reminder layout. */
-.screen-settings .status-bar { height:44px; padding:0 var(--s5); }
 .screen-settings .sub-header { height:44px; }
 .settings-page { flex:1; padding:12px var(--s5) 16px; overflow-y:auto; }
 .settings-page .cloud-account { width:100%; max-width:none; margin:0; padding:0; background:transparent; color:var(--gray-900); font-size:var(--t2); line-height:var(--lh3); }
@@ -183,7 +182,6 @@
 .email-return-error { color:var(--red-500); font-size:var(--t1); margin-top:12px; }
 .email-return-preview { display:block; margin:8px auto 0; padding:8px; background:transparent; color:var(--gray-800); font-size:var(--t1); text-decoration:underline; }
 @media (max-height:740px) {
-  .email-return-shell > .status-bar { height:40px; padding-block:10px; }
   .email-return-page { padding-top:8px; padding-bottom:8px; }
   .email-return-symbol { width:40px; height:40px; margin-bottom:8px; }
   .email-return-intro { margin-bottom:12px; }

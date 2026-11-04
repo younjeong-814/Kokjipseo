@@ -3,7 +3,6 @@ import { authRedirectUrl, supabase } from './client';
 import { rememberAuthReturn } from './authReturn';
 import { Snackbar } from '../../components/Snackbar';
 import { ActionButton } from '../../components/ActionButton';
-import { StatusBar } from '../../components/StatusBar';
 import { asset } from '../../lib/assets';
 
 export function EmailReturnNotice({preview=false}:{preview?:boolean}) {
@@ -33,7 +32,6 @@ export function EmailReturnNotice({preview=false}:{preview?:boolean}) {
     finally { setBusy(false); }
   }
   return <div className="app-shell email-return-shell">
-    <StatusBar />
     <main className="email-return-page">
       <div className="email-return-intro">
         <span className="email-return-symbol" aria-hidden="true"><img src={asset('fridge-active.svg')} alt="" /></span>
