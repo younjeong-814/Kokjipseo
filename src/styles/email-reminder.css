@@ -70,8 +70,8 @@
   outline:0;
   background:transparent;
   color:var(--gray-600);
-  font-size:var(--t2);
-  line-height:var(--lh2);
+  font-size:var(--t3); /* iOS Safari: 16px 미만이면 포커스 시 자동 확대 */
+  line-height:var(--lh3);
   font-weight:400;
 }
 .email-reminder-input > input::placeholder { color:var(--gray-600); opacity:1; font-weight:400; }

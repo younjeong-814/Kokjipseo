@@ -1,4 +1,4 @@
-.recipe-detail-page { flex: 1; padding-top: 15px; }
+.recipe-detail-page { flex: 1; }
 .recipe-detail-page + .recipe-source { margin: 24px 20px; }
 .recipe-detail-page .sub-header { height: 58px; }
 .recipe-detail-page .sub-header h1 { width: 100%; padding-left: 24px; }

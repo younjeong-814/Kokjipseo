@@ -5,7 +5,7 @@
 .fridge-search-input { display: flex; align-items: center; justify-content: space-between; height: 54px; padding: 11px 15px; border: 1px solid transparent; border-radius: var(--r5); background: var(--gray-200); }
 .fridge-search-input.filled { background: var(--blue-100); }
 .fridge-search-input.focused { background: #fafdff; border-color: var(--blue-500); }
-.fridge-search-input input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: none; background: transparent; color: var(--gray-800); font-size: var(--t2); line-height: var(--lh2); }
+.fridge-search-input input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: none; background: transparent; color: var(--gray-800); font-size: var(--t3); line-height: var(--lh3); } /* iOS Safari: 16px 미만이면 포커스 시 자동 확대 */
 .fridge-search-input input:focus-visible { outline: none; }
 .fridge-search-input input::placeholder { color: var(--gray-600); opacity: 1; }
 .fridge-search-input.filled:not(.focused) input { font-weight: 500; }

@@ -1,13 +1,17 @@
 .manual-entry { display: flex; flex-direction: column; flex: 1; }
+/* 스크롤은 입력 영역만 담당하고, 헤더·에러·등록 버튼은 화면에 고정한다. */
+.app-shell > main.manual-entry { overflow: hidden; }
+.manual-entry > :not(.manual-fields) { flex-shrink: 0; }
 .manual-entry .sub-header h1 { width: 100%; padding-left: 24px; }
-.manual-fields { padding: 16px 28px 16px 20px; min-height: 638px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.manual-fields { padding: 16px 28px 16px 20px; min-height: 638px; flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; overscroll-behavior-y: contain; }
+.manual-fields > * { flex-shrink: 0; }
 .manual-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .manual-field > span { height: 22px; font-size: var(--t4); line-height: var(--lh4); font-weight: 700; }
 .manual-input { display: flex; align-items: center; height: 54px; background: var(--gray-200); border: 1px solid transparent; border-radius: var(--r5); padding: 11px 15px; transition: background-color .25s ease-out, border-color .25s ease-out; }
 .manual-input.filled { background: var(--blue-100); }
 .manual-quantity .manual-input.filled:not(:focus-within) { background: var(--gray-200); }
 .manual-input:focus-within { background: #fafdff; border-color: var(--blue-500); }
-.manual-input input { min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; color: var(--gray-800); font-size: var(--t2); line-height: var(--lh2); outline: none; }
+.manual-input input { min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; color: var(--gray-800); font-size: var(--t3); line-height: var(--lh3); outline: none; } /* iOS Safari: 16px 미만이면 포커스 시 자동 확대 */
 .manual-input input::placeholder { color: var(--gray-600); opacity: 1; }
 .manual-input:has(input:focus) input { outline: none; }
 .manual-input button { display: flex; flex-shrink: 0; padding: 0; background: transparent; width: 24px; height: 24px; }
