@@ -115,6 +115,27 @@ test('guest records are stashed before relogin and merged into the existing Goog
  assert.equal(takeGuestRecords('google',old,new Date(now.getTime()+2*60*60*1000)),null);
  await assert.rejects(stashGuestRecords('anon',async()=>{throw new Error('offline')},mem(),now));
 });
+test('records saved before account storage are merged once and archived',()=>{
+ const {takeLocalRecords,archiveLocalRecords,mergeGuestRecords,LOCAL_BACKUP_KEY}=load('../src/features/cloud/guestTransfer.ts');
+ const mem=()=>{const m=new Map();return{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),m};};
+ const disk=mem();
+ assert.equal(takeLocalRecords(disk),null);
+ const old={id:'old',name:'우유',action:'consumed',recordedAt:'2026-10-20T00:00:00Z',createdAt:'2026-10-15T00:00:00Z'};
+ disk.setItem(snapshotKeys.history,JSON.stringify([old]));
+ const local=takeLocalRecords(disk);
+ assert.deepEqual(local.history,[old]);
+ let saved={...emptySnapshot(),history:[{...old,id:'new',recordedAt:'2026-11-03T00:00:00Z'}]};
+ const store={snapshot:()=>JSON.parse(JSON.stringify(saved)),setItem:(k,v)=>{assert.equal(k,snapshotKeys.history);saved={...saved,history:JSON.parse(v)};}};
+ assert.deepEqual(mergeGuestRecords(store,local),['history']);
+ assert.deepEqual(saved.history.map(r=>r.id).sort(),['new','old']);
+ archiveLocalRecords(disk,new Date(1));
+ assert.equal(disk.getItem(snapshotKeys.history),null);
+ assert.deepEqual(JSON.parse(disk.getItem(`${LOCAL_BACKUP_KEY}.1`))[snapshotKeys.history],JSON.stringify([old]));
+ assert.equal(takeLocalRecords(disk),null);
+ // 읽지 못하는 원본은 건드리지 않는다.
+ const broken=mem();broken.setItem(snapshotKeys.history,'{');
+ assert.equal(takeLocalRecords(broken),null);assert.equal(broken.getItem(snapshotKeys.history),'{');
+});
 
 const {isEmailReturn,prepareEntrySession}=load('../src/features/cloud/emailReturn.ts');
 test('email navigation marker is exact and never an account identity',()=>{

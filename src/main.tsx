@@ -4,6 +4,7 @@ import { App } from './App';
 import { CloudRoot } from './features/cloud/CloudRoot';
 import './styles/cloud.css';
 import './styles/email-reminder.css';
+import './styles/ut-consent.css';
 import './styles/tokens.css';
 import './styles/global.css';
 import './styles/screens.css';

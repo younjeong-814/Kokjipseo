@@ -91,7 +91,7 @@ before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.uid() to anon,authenticated,service_role;`);
- for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+ for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
 });
 after(()=>db.close());
@@ -148,6 +148,20 @@ test('UT events require active consent, idempotency and delivery ownership',asyn
   assert.equal((await db.query('select count(*)::int as n from public.ut_events')).rows[0].n,1);
   assert.equal((await db.query("select public.record_ut_event($1,'notification_click',null,$2) as ok",[crypto.randomUUID(),crypto.randomUUID()])).rows[0].ok,false);
   await db.query('select public.set_ut_participation(false)');assert.equal((await db.query("select public.record_ut_event($1,'app_open') as ok",[crypto.randomUUID()])).rows[0].ok,false);
+ });
+});
+test('screen views need consent, a valid screen name and an allowed source',async()=>{
+ await asUser(a,async()=>{
+  await db.query('select public.set_ut_participation(false)');
+  assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'home','pickply') as ok",[crypto.randomUUID()])).rows[0].ok,false);
+  await db.query('select public.set_ut_participation(true)');
+  assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'manual-entry','pickply') as ok",[crypto.randomUUID()])).rows[0].ok,true);
+  assert.equal((await db.query("select public.record_ut_event($1,'screen_view') as ok",[crypto.randomUUID()])).rows[0].ok,false);
+  assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'Home<script>') as ok",[crypto.randomUUID()])).rows[0].ok,false);
+  assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'home','ads') as ok",[crypto.randomUUID()])).rows[0].ok,false);
+  const row=(await db.query("select screen,source from public.ut_events where event_type='screen_view'")).rows;
+  assert.deepEqual(row,[{screen:'manual-entry',source:'pickply'}]);
+  await db.query('select public.set_ut_participation(false)');
  });
 });
 test('queue leases prevent duplicate claims, retries stop at three, and eligibility is checked before send',async()=>{

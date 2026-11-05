@@ -1,5 +1,5 @@
 import { cacheKey } from './storage';
-import { mergeSnapshots, snapshotKeys, validateSnapshot, type AppStorage, type Snapshot } from './snapshot';
+import { mergeSnapshots, snapshotFromStorage, snapshotKeys, validateSnapshot, type AppStorage, type Snapshot } from './snapshot';
 
 // 이미 다른 계정에 연결된 Google 계정으로 로그인하면 user.id가 바뀌어 임시 계정의 기록에 더는 접근할 수 없다.
 // 로그인 직전에 임시 계정의 기록을 이 브라우저에 보관해 두었다가, 로그인한 계정의 기록에 합친다.
@@ -40,6 +40,24 @@ export function takeGuestRecords(owner: string, disk: Disk = localStorage, now =
     validateSnapshot({ ...transfer.snapshot, revision: 0 });
     return pick(transfer.snapshot);
   } catch { return null; }
+}
+
+// 계정 저장으로 바뀌기 전에는 기록이 이 브라우저의 일반 키에 쌓였다. 처음 연결된 계정에 한 번 합치고 원본은 백업 키로 옮긴다.
+export const LOCAL_BACKUP_KEY = 'kokjipseo.local-records-backup.v1';
+
+/** 계정 저장 전환 전 이 브라우저에 남은 기록을 읽는다. 없거나 읽지 못하면 null(원본은 그대로 둔다). */
+export function takeLocalRecords(disk: Disk = localStorage): Snapshot | null {
+  try {
+    const snapshot = snapshotFromStorage(disk);
+    return isEmpty(snapshot) ? null : snapshot;
+  } catch { return null; }
+}
+
+/** 계정에 합친 뒤 원본을 백업 키로 옮겨 다음 접속 때 다시 합치지 않게 한다. */
+export function archiveLocalRecords(disk: Disk = localStorage, now = new Date()) {
+  const raw = Object.fromEntries(Object.values(snapshotKeys).map(key => [key, disk.getItem(key)]).filter(([, value]) => value !== null));
+  disk.setItem(`${LOCAL_BACKUP_KEY}.${now.getTime()}`, JSON.stringify(raw));
+  for (const key of Object.keys(raw)) disk.removeItem(key);
 }
 
 /** 로그인한 계정의 기록을 우선하고, 없는 임시 기록만 더한다. 바뀐 항목 목록을 돌려준다. */

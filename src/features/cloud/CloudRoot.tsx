@@ -8,7 +8,7 @@ import { StorageContext } from './StorageContext';
 import { CloudStorage, cacheKey, preservePendingBeforeReload } from './storage';
 import { mergeSnapshots, parseBackup, snapshotKeys, validateSnapshot, type Snapshot } from './snapshot';
 import { DataBackupSheet, type UnsavedNotice } from './DataBackupSheet';
-import { mergeGuestRecords, stashGuestRecords, takeGuestRecords } from './guestTransfer';
+import { archiveLocalRecords, mergeGuestRecords, stashGuestRecords, takeGuestRecords, takeLocalRecords } from './guestTransfer';
 
 import { AccountContext } from './AccountContext';
 import { ConnectionStatusIcon } from '../../components/ConnectionStatusIcon';
@@ -172,6 +172,9 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
         for(const raw of validateSnapshot(data).activities)observedActivities.add((raw as {id:string}).id);
         // 이미 있던 Google 계정으로 로그인했다면 직전 임시 계정의 기록을 합친다. 합친 결과는 미전송분으로 저장된다.
         if(!session.user.is_anonymous){const guest=takeGuestRecords(session.user.id);if(guest)mergeGuestRecords(store,guest);}
+        // 계정 저장 전환 전 이 브라우저에 쌓인 기록(지난주·지난달 리포트 등)을 계정에 합친다. 예전 활동은 새 활동으로 다시 보내지 않는다.
+        const local=takeLocalRecords();
+        if(local){try{mergeGuestRecords(store,local);for(const raw of local.activities)observedActivities.add((raw as {id:string}).id);archiveLocalRecords();}catch{/* 합치지 못하면 원본을 남겨 다음 접속 때 다시 시도한다. */}}
         setStorage(store);setError('');setStatus(store.pending?'저장 대기 중이에요':'내 냉장고가 연결됐어요');if(store.pending)schedule();
       }catch{if(!cancelled)setError('계정 데이터를 불러오지 못했어요. DB 설정·연결을 확인해 주세요. 미전송 기록이 있다면 먼저 백업해 주세요.');}
     })();
