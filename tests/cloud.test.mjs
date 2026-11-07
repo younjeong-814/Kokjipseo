@@ -71,7 +71,7 @@ test('backup import reads exported account caches and bare snapshots; merge keep
  assert.deepEqual(parseBackup(exported).recipes,[recipe]);
  assert.deepEqual(parseBackup(JSON.stringify({recipes:[recipe]})),{...emptySnapshot(),recipes:[recipe]});
  assert.throws(()=>parseBackup('not json'),/백업 파일을 읽지 못했어요/);
- assert.throws(()=>parseBackup(JSON.stringify({recipes:[{id:'broken'}]})),/형식이 올바르지 않아요/);
+ assert.throws(()=>parseBackup(JSON.stringify({recipes:[{id:'broken'}]})),/백업 파일을 읽지 못했어요/);
  const current={...emptySnapshot(),recipes:[{...recipe,name:'최신'}]};
  assert.equal(mergeSnapshots(current,parseBackup(exported)).recipes[0].name,'최신');
 });
