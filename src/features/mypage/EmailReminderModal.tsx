@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {OverlayDialog} from '../../components/OverlayDialog';
 import {asset} from '../../lib/assets';
 import {isEmail,requestEmailCode,verifyEmailCode} from '../notifications/client';
+import {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS} from '../notifications/verificationInput';
 type Step='email'|'code'|'expired'|'success';
 function EmailReminderField({
   id,
@@ -32,6 +33,7 @@ function EmailReminderField({
         autoComplete={id === 'reminder-email' ? 'email' : 'one-time-code'}
         inputMode={id === 'reminder-code' ? 'numeric' : 'email'}
         maxLength={id === 'reminder-email' ? 254 : 6}
+        aria-describedby={helperText ? `${id}-helper` : undefined}
         autoFocus
         placeholder={placeholder}
         value={value}
@@ -39,6 +41,10 @@ function EmailReminderField({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onChange={event => onChange(event.target.value)}
+        onPaste={id === 'reminder-code' ? event=>{
+          event.preventDefault();
+          onChange(normalizeVerificationCode(event.clipboardData.getData('text')));
+        } : undefined}
       />
       {focused && filled && !disabled && <button
         type="button"
@@ -48,7 +54,7 @@ function EmailReminderField({
         onClick={() => onChange('')}
       ><img src={asset('search-clear.svg')} alt="" /></button>}
     </div>
-    {helperText && <p className="email-reminder-field-helper">{helperText}</p>}
+    {helperText && <p id={`${id}-helper`} className="email-reminder-field-helper">{helperText}</p>}
   </div>;
 }
 
@@ -56,17 +62,23 @@ export function EmailReminderModal({onClose, mode = 'apply'}:{onClose:()=>void; 
   const [step,setStep]=useState<Step>('email'),[email,setEmail]=useState(''),[code,setCode]=useState('');
   const [consent,setConsent]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [requestId,setRequestId]=useState(''),[deadline,setDeadline]=useState<number|null>(null),[secondsLeft,setSecondsLeft]=useState(300);
+  const [resendDeadline,setResendDeadline]=useState<number|null>(null),[resendSeconds,setResendSeconds]=useState(0);
   const working=useRef(false);
   useEffect(()=>{
     if(deadline===null||step!=='code')return;
     const update=()=>{const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));setSecondsLeft(left);if(!left)setStep('expired');};
     update();const timer=window.setInterval(update,500);return()=>window.clearInterval(timer);
   },[deadline,step]);
+  useEffect(()=>{
+    if(resendDeadline===null||step==='success')return;
+    const update=()=>setResendSeconds(remainingSeconds(resendDeadline));
+    update();const timer=window.setInterval(update,500);return()=>window.clearInterval(timer);
+  },[resendDeadline,step]);
   const requestCode=async()=>{
-    if(working.current)return;
+    if(working.current||remainingSeconds(resendDeadline)>0)return;
     if(!isEmail(email.trim())||!consent){setError('이메일 주소와 알림 수신 동의를 확인해 주세요.');return;}
     working.current=true;setBusy(true);setError('');
-    try{const result=await requestEmailCode(email.trim());setRequestId(result.requestId);setCode('');setDeadline(Date.parse(result.expiresAt));setStep('code');}
+    try{const result=await requestEmailCode(email.trim());setRequestId(result.requestId);setCode('');setDeadline(Date.parse(result.expiresAt));setResendDeadline(Date.now()+RESEND_WAIT_MS);setResendSeconds(60);setStep('code');}
     catch(e){setError(e instanceof Error?e.message:'인증 메일을 요청하지 못했어요.');}
     finally{working.current=false;setBusy(false);}
   };
@@ -91,14 +103,15 @@ export function EmailReminderModal({onClose, mode = 'apply'}:{onClose:()=>void; 
           <label className="email-reminder-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>소비 권장일 이메일 알림 수신에 동의해요.<small>알림은 설정에서 언제든 끌 수 있어요.</small></span></label>
           <p>새 이메일 인증이 끝나기 전에는 기존 알림 주소를 유지해요. Google 로그인 계정은 변경되지 않아요.</p>
         </>:<>
-          <EmailReminderField id="reminder-code" label="인증번호" placeholder="숫자 6자리 입력" value={code} disabled={step==='expired'||busy} onChange={value=>{setCode(value.replace(/\D/g,'').slice(0,6));setError('');}}/>
+          <EmailReminderField id="reminder-code" label="인증번호" placeholder="숫자 6자리 입력" value={code} helperText={step==='code'&&code.length<6?'인증번호 6자리를 입력해 주세요.':undefined} disabled={step==='expired'||busy} onChange={value=>{setCode(normalizeVerificationCode(value));setError('');}}/>
           <p className={step==='expired'?'email-reminder-error':'email-reminder-timer'}>{step==='expired'?'인증번호가 만료됐어요. 새 번호를 받아주세요.':`인증번호 유효시간 ${String(Math.floor(secondsLeft/60)).padStart(2,'0')}:${String(secondsLeft%60).padStart(2,'0')}`}</p>
-          <div className="email-reminder-links"><button type="button" disabled={busy} onClick={()=>{setStep('email');setCode('');setDeadline(null);setError('');}}>이메일 주소 수정</button><button type="button" disabled={busy} onClick={()=>void requestCode()}>인증번호 다시 받기</button></div>
+          <div className="email-reminder-links"><button type="button" disabled={busy} onClick={()=>{setStep('email');setCode('');setDeadline(null);setError('');}}>이메일 주소 수정</button><button type="button" disabled={busy||resendSeconds>0} onClick={()=>void requestCode()}>{resendSeconds>0?`다시 받기 · ${resendSeconds}초 후 가능`:'인증번호 다시 받기'}</button></div>
           <p>메일이 보이지 않으면 스팸함도 확인해 주세요.</p>
         </>}
       </div>}
+      {step==='email'&&resendSeconds>0&&<p className="email-reminder-resend-note">인증번호는 {resendSeconds}초 후 다시 요청할 수 있어요.</p>}
       {error&&<p className="email-reminder-error email-reminder-server-error" role="alert">{error}</p>}
-      <footer className="email-reminder-footer">{step==='success'?<button type="button" onClick={onClose}>확인</button>:<button type="button" disabled={busy||(step==='email'?(!isEmail(email.trim())||!consent):step==='code'?!/^\d{6}$/.test(code):false)} onClick={()=>void(step==='code'?verify():requestCode())}>{busy?'처리 중이에요':step==='email'?'인증번호 받기':step==='expired'?'인증번호 다시 받기':'인증하고 알림 받기'}</button>}</footer>
+      <footer className="email-reminder-footer">{step==='success'?<button type="button" onClick={onClose}>확인</button>:<button type="button" disabled={busy||(step==='email'?(!isEmail(email.trim())||!consent||resendSeconds>0):step==='code'?!/^\d{6}$/.test(code):resendSeconds>0)} onClick={()=>void(step==='code'?verify():requestCode())}>{busy?'처리 중이에요':step==='email'?'인증번호 받기':step==='expired'?'인증번호 다시 받기':'인증하고 알림 받기'}</button>}</footer>
     </div>
   </OverlayDialog>;
 }

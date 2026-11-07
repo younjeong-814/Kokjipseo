@@ -10,6 +10,26 @@ const {securedHandler,imageBody}=load('../supabase/functions/_shared/http.ts');
 const {parsePhotoResult,recognizePhoto}=load('../supabase/functions/_shared/photo.ts');
 const {configureExternalRequests,requestExternal}=load('../src/features/cloud/externalRequests.ts');
 const {ensureAnonymousSession}=load('../src/features/cloud/anonymous.ts');
+const {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS}=load('../src/features/notifications/verificationInput.ts');
+
+test('verification paste keeps six digits after whitespace and preserves a leading zero',()=>{
+ assert.equal(normalizeVerificationCode(' 012345\n'),'012345');
+ assert.equal(normalizeVerificationCode('123 456'),'123456');
+ assert.equal(normalizeVerificationCode('12\t34\n56'),'123456');
+ assert.equal(normalizeVerificationCode('12345'),'12345');
+ assert.equal(normalizeVerificationCode('1234567'),'123456');
+});
+test('resend countdown uses elapsed wall time even after a background tab skips ticks',()=>{
+ const sentAt=100_000,until=sentAt+RESEND_WAIT_MS;
+ assert.equal(remainingSeconds(until,sentAt),60);
+ assert.equal(remainingSeconds(until,sentAt+59_999),1);
+ assert.equal(remainingSeconds(until,sentAt+60_000),0);
+ assert.equal(remainingSeconds(until,sentAt+100_000),0);
+ assert.equal(remainingSeconds(null,sentAt),0);
+ // An unexpired verification code remains valid while resending is blocked.
+ assert.equal(remainingSeconds(sentAt+300_000,sentAt+30_000),270);
+ assert.equal(remainingSeconds(until,sentAt+30_000),30);
+});
 
 test('anonymous bootstrap reuses permanent and anonymous sessions without creating users',async()=>{
  for(const is_anonymous of [true,false]){
