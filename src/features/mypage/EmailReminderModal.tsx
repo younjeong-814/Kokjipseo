@@ -52,7 +52,7 @@ function EmailReminderField({
   </div>;
 }
 
-export function EmailReminderModal({onClose}:{onClose:()=>void}){
+export function EmailReminderModal({onClose, mode = 'apply'}:{onClose:()=>void; mode?: 'apply' | 'change'}){
   const [step,setStep]=useState<Step>('email'),[email,setEmail]=useState(''),[code,setCode]=useState('');
   const [consent,setConsent]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [requestId,setRequestId]=useState(''),[deadline,setDeadline]=useState<number|null>(null),[secondsLeft,setSecondsLeft]=useState(300);
@@ -78,8 +78,9 @@ export function EmailReminderModal({onClose}:{onClose:()=>void}){
     catch(e){setError(e instanceof Error?e.message:'인증번호를 확인해 주세요.');}
     finally{working.current=false;setBusy(false);}
   };
-  const title=step==='email'?'알림 이메일 신청':step==='expired'?'인증시간이 지났어요':step==='success'?'이메일 인증이 완료됐어요':'이메일을 확인해 주세요';
-  return <OverlayDialog label="알림 이메일 신청" onClose={onClose} className="email-reminder-dialog">
+  const emailTitle = mode === 'change' ? '알림 이메일 변경' : '알림 이메일 신청';
+  const title=step==='email'?emailTitle:step==='expired'?'인증시간이 지났어요':step==='success'?'이메일 인증이 완료됐어요':'이메일을 확인해 주세요';
+  return <OverlayDialog label={title} onClose={onClose} className="email-reminder-dialog">
     <div className="email-reminder-content">
       <div className="email-reminder-heading"><div><h2>{title}</h2><p>{step==='email'?'소비 권장일 알림을 받을 이메일 주소를 알려주세요.':step==='expired'?'새 인증번호를 받아 이메일 인증을 이어가 주세요.':step==='success'?'인증한 이메일로 알림을 받을 수 있어요.':`${email.trim()}으로 인증번호를 보냈어요.`}</p></div>
         <button type="button" className="email-reminder-close" aria-label="닫기" onClick={onClose}><img src={asset('modal-close.svg')} alt=""/></button></div>
