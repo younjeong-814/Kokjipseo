@@ -87,4 +87,15 @@ body { background: var(--gray-0); }
   .method-card p br { display: none; }
   .method-card p, .expiring-modal-heading h2, .expiring-modal-heading p, .mypage-score-copy p, .mypage-score-copy strong, .mypage-score-copy small { word-break: keep-all; }
 }
-.app-shell > main > .sub-header { position: sticky; top: 0; z-index: 2; background: var(--gray-0); }
+.app-shell > main > .sub-header,
+.app-shell > main.fridge-page > .screen-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--gray-0);
+}
+.app-shell > main.fridge-page > .screen-tabs {
+  flex-shrink: 0;
+  margin-inline: 0;
+  padding-inline: 20px;
+}
