@@ -73,7 +73,8 @@ export function isExcludedItem(name: string): boolean {
   return ALCOHOL.some(keyword => text.includes(keyword)) || words.some(word => ALCOHOL_BRANDS.includes(word));
 }
 
-const entries = Object.entries(dictionary).flatMap(([category, keywords]) => keywords.map(keyword => ({ category, keyword })));
+/** 사전 전체(키워드·카테고리). 레시피 검색 점검 스크립트(scripts/audit-recipe-search.mjs)도 쓴다. */
+export const entries = Object.entries(dictionary).flatMap(([category, keywords]) => keywords.map(keyword => ({ category, keyword })));
 
 /** 이름에서 규칙상 이기는 키워드와 그 카테고리. 소비권장일 DB를 찾을 때도 이 키워드를 쓴다. */
 export function matchIngredient(name: string): { keyword: string; category: string } | undefined {
