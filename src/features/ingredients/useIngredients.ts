@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { updateIngredientInfo } from './repository';
 import type { IngredientInfoPatch } from './IngredientEditModal';
 import { recordDisposal } from '../report/weeklyReport';
+import { takeIngredient, restoreIngredient, type RemovedIngredient } from './repository';
 import { deleteIngredient, INGREDIENTS_KEY, loadIngredients, saveIngredient, updateIngredientDetails, recordIngredientCondition, saveRecognizedIngredients, type IngredientCondition, type Ingredient, type IngredientDraft } from './repository';
 
 export function useIngredients() {
@@ -57,6 +58,14 @@ export function useIngredients() {
     consume: (id: string) => {
       try { commit(consumeIngredient(storage, id)); }
       catch (failure) { throw new Error(failure instanceof Error ? failure.message : '소비 완료를 저장하지 못했어요.'); }
+    },
+    removeFromList: (id: string) => {
+      const { items, removed } = takeIngredient(storage, id);
+      setState({ items, error: '' });
+      return removed;
+    },
+    restoreToList: (removed: RemovedIngredient) => {
+      setState({ items: restoreIngredient(storage, removed), error: '' });
     },
     remove: (id: string) => {
       const removed = state.items.find(item => item.id === id);
