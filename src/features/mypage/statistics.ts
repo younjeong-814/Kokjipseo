@@ -1,5 +1,5 @@
 import type { ReportActivity } from './activityLog';
-import { discardFeedback, pendingReports, withAnd, type MyPageReports, type ReportPeriod } from './report';
+import { discardFeedback, hasEnoughReportData, pendingReports, withAnd, type MyPageReports, type ReportPeriod } from './report';
 import { managementScore, managementGrade } from './score';
 export function periodStart(period: ReportPeriod, end: number): number {
   const date = new Date(end);
@@ -73,7 +73,10 @@ export function applyDailyScores(storage: Pick<Storage,'getItem'|'setItem'>, rep
     const score = snapshot.scores[p], before = hasPrevious ? managementScore(previous.consumptionRate,previous.managementRate ?? null) : null, label = reports[p].previousLabel;
     reports[p].score = score;
     reports[p].grade = managementGrade(score);
-    reports[p].scoreChange = score === null || before === null ? `${p === '주간' ? '다음 주' : p === '월간' ? '다음 달' : '내년'}부터 ${withAnd(label)} 비교해 드릴게요`
+    // 데이터가 충분히 쌓이기 전(점수 없음 또는 소비·폐기 완료 3개 미만)에는 갱신 시각을,
+    // 쌓인 뒤 비교할 직전 기간이 없으면 비교 시작 시점을 안내한다.
+    reports[p].scoreChange = score === null || !hasEnoughReportData(reports[p]) ? '점수는 매일 오전 6시에 업데이트돼요'
+      : before === null ? `${p === '주간' ? '다음 주' : p === '월간' ? '다음 달' : '내년'}부터 ${withAnd(label)} 비교해 드릴게요`
       : score > before ? `↗ ${label}보다 ${score - before}점 올랐어요` : score < before ? `↘ ${label}보다 ${before - score}점 내렸어요` : `${withAnd(label)} 같은 점수예요`;
     reports[p].scoreUpdatedAt = new Date(snapshot.cutoff).toISOString();
   }

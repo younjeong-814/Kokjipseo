@@ -21,5 +21,28 @@ const {syncActivities,readActivities,ACTIVITY_KEY}=load(new URL('../src/features
 test('journal preserves registration and state history after removal and repeated sync',()=>{const store=memory();const item={id:'x',name:'양파',category:'채소',storage:'냉장',date:'2026-11-01',createdAt:'2026-10-18T00:00:00Z',conditionHistory:[{id:'condition-1',recordedAt:'2026-10-20T00:00:00Z',status:'싱싱해요'}]};const next={...item,storage:'냉동',remainingPercent:75};syncActivities(store,[next],[],[item],now);syncActivities(store,[],[{id:'x',name:'양파',action:'consumed',recordedAt:now.toISOString(),createdAt:item.createdAt,category:item.category}], [next],now);const saved=readActivities(store);assert.equal(saved.filter(e=>e.type==='registered').length,1);assert.equal(saved.filter(e=>e.type==='storage').length,1);assert.equal(saved.filter(e=>e.type==='partial').length,1);assert.equal(saved.filter(e=>e.type==='condition').length,1);assert.equal(saved.filter(e=>e.type==='consumed').length,1);syncActivities(store,[],[],[],now);assert.deepEqual(readActivities(store),saved)});
 test('damaged activity journal is not overwritten',()=>{const store=memory();store.setItem(ACTIVITY_KEY,'broken');assert.throws(()=>syncActivities(store,[],[]));assert.equal(store.getItem(ACTIVITY_KEY),'broken')});
 test('score change guides when previous period has only registrations',()=>{const r=applyDailyScores(memory(),reportsFromActivities(events,now),events,now);assert.equal(r['주간'].scoreChange,'다음 주부터 지난주와 비교해 드릴게요');assert.equal(r['월간'].scoreChange,'다음 달부터 지난달과 비교해 드릴게요');assert.equal(r['연간'].scoreChange,'내년부터 지난해와 비교해 드릴게요')});
+test('score change shows update time until three items are completed',()=>{const few=[...registrations,event('0','consumed')];const r=applyDailyScores(memory(),reportsFromActivities(few,now),few,now);for(const p of ['주간','월간','연간']){assert.notEqual(r[p].score,null);assert.equal(r[p].scoreChange,'점수는 매일 오전 6시에 업데이트돼요')}});
+test('score change shows update time when no score yet',()=>{const r=applyDailyScores(memory(),reportsFromActivities([],now),[],now);for(const p of ['주간','월간','연간'])assert.equal(r[p].scoreChange,'점수는 매일 오전 6시에 업데이트돼요')});
 test('score change compares with previous period consumption records',()=>{const withPrev=[...events,event('7','registered','2026-10-12T12:00:00+09:00'),event('7','consumed','2026-10-13T12:00:00+09:00')];const r=applyDailyScores(memory(),reportsFromActivities(withPrev,now),withPrev,now)['주간'];assert.match(r.scoreChange,/^[↗↘] 지난주보다 \d+점 (올랐|내렸)어요$|^지난주와 같은 점수예요$/)});
 test('discard feedback hidden without previous discards and phrased by direction',()=>{const {discardFeedback,withAnd}=load(new URL('../src/features/mypage/report.ts',import.meta.url));assert.equal(reportsFromActivities(events,now)['주간'].feedbackTitle,null);assert.deepEqual(discardFeedback('지난달','이번 달',20,17),{feedbackTitle:'지난달보다 폐기율이 15% 줄었어요!',feedbackDescription:'이번 달도 알뜰하게 관리하고 있어요'});assert.equal(discardFeedback('지난주','이번 주',2,3).feedbackTitle,'지난주보다 폐기율이 50% 늘었어요');assert.equal(withAnd('지난달'),'지난달과');assert.equal(withAnd('지난해'),'지난해와')});
+test('last week disposal records fill the previous column of the comparison table',()=>{
+  const at=new Date('2026-11-07T17:30:00+09:00');
+  const rec=(id,name,action,recordedAt,createdAt)=>({id,name,action,recordedAt:new Date(recordedAt).toISOString(),createdAt:new Date(createdAt).toISOString(),category:'채소'});
+  const history=[
+    // 이번 주(11/2~) 실제 계정과 같은 기록
+    rec('tofu','두부','discarded','2026-11-07T17:21:27+09:00','2026-10-19T23:03:13+09:00'),
+    rec('pork','돼지','consumed','2026-11-07T10:21:32+09:00','2026-11-05T21:09:49+09:00'),
+    rec('fruit','과일','consumed','2026-11-05T23:01:10+09:00','2026-11-05T23:01:08+09:00'),
+    rec('duck','오리고기','consumed','2026-11-04T23:05:02+09:00','2026-11-04T23:00:52+09:00'),
+    // 지난주(10/26~11/1) 테스트 기록
+    rec('egg','계란','consumed','2026-10-28T12:00:00+09:00','2026-10-26T09:00:00+09:00'),
+    rec('milk','우유','consumed','2026-11-01T20:00:00+09:00','2026-10-27T09:00:00+09:00'),
+    rec('spinach','시금치','discarded','2026-10-30T08:00:00+09:00','2026-10-26T09:00:00+09:00'),
+  ];
+  const store=memory();
+  const events=syncActivities(store,[],history,[],at);
+  const r=applyDailyScores(memory(),reportsFromActivities(events,at),events,at)['주간'];
+  assert.deepEqual(r.consumed,{previous:2,current:3});
+  assert.deepEqual(r.discarded,{previous:1,current:1});
+  assert.match(r.scoreChange,/^[↗↘] 지난주보다 \d+점 (올랐|내렸)어요$|^지난주와 같은 점수예요$/);
+});
