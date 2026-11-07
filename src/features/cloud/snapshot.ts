@@ -27,11 +27,12 @@ export function snapshotFromStorage(storage: AppStorage): Snapshot {
 }
 /** 내보내기 파일(계정 캐시 {revision,snapshot,...}) 또는 스냅샷 자체를 읽는다. */
 export function parseBackup(text: string): Snapshot {
+  const unreadable = () => new Error('백업 파일을 읽지 못했어요. 내보내기로 저장한 파일인지 확인해 주세요.');
   let raw: any;
-  try { raw = JSON.parse(text); } catch { throw new Error('백업 파일을 읽지 못했어요. 내보내기로 저장한 .json 파일인지 확인해 주세요.'); }
+  try { raw = JSON.parse(text); } catch { throw unreadable(); }
   const source = raw && typeof raw === 'object' && raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw;
   const snapshot = Object.fromEntries((Object.keys(snapshotKeys) as (keyof Snapshot)[]).map(k => [k, source?.[k] ?? []])) as Snapshot;
-  try { validateSnapshot({...snapshot,revision:0}); } catch { throw new Error('백업 파일 형식이 올바르지 않아요. 기존 기록은 그대로 유지돼요.'); }
+  try { validateSnapshot({...snapshot,revision:0}); } catch { throw unreadable(); }
   return snapshot;
 }
 export function mergeSnapshots(remote: Snapshot, guest: Snapshot): Snapshot {
