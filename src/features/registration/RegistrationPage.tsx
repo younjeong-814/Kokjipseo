@@ -4,10 +4,10 @@ import { asset } from '../../lib/assets';
 import type { Navigate } from '../../prototype/flow';
 
 export const methods = [
-  { title: '냉장고 칸 촬영', image: 'method-fridge.png', description: <>냉장고 안을 촬영해 여러<br />식재료를 등록해요</> },
+  { title: '냉장고 칸 촬영', image: 'method-fridge.png', description: <>냉장고 안을 촬영해 여러 <br />식재료를 등록해요</> },
   { title: '상품 직접 촬영', image: 'method-camera.png', description: <>상품을 촬영해 식재료 정보<br />를 간편하게 등록해요</> },
-  { title: '영수증 촬영', image: 'method-receipt.png', description: <>영수증을 촬영해 식재료를<br />간편하게 등록해요</> },
-  { title: '직접입력', image: 'method-edit.png', description: <>필요한 정보를 직접 입력해<br />식재료를 등록해요</> },
+  { title: '영수증 촬영', image: 'method-receipt.png', description: <>영수증을 촬영해 식재료를 <br />간편하게 등록해요</> },
+  { title: '직접입력', image: 'method-edit.png', description: <>필요한 정보를 직접 입력해 <br />식재료를 등록해요</> },
 ];
 
 export function RegistrationPage({ navigate }: { navigate: Navigate }) {

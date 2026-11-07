@@ -70,7 +70,7 @@
 .ingredient-edit-modal header p { font-size: 14px; line-height: 19px; color: var(--gray-700); margin-top: 8px; }
 .ingredient-edit-modal header button { padding: 0; background: transparent; flex-shrink: 0; }
 .ingredient-edit-field { display: flex; flex-direction: column; gap: 8px; font-size: 18px; line-height: 22px; font-weight: 700; }
-.ingredient-edit-field input { width: 100%; min-width: 0; height: 54px; border: 0; border-radius: 20px; background: var(--gray-200); color: var(--gray-800); padding: 12px 16px; font-size: 14px; font-weight: 400; outline-offset: 2px; }
+.ingredient-edit-field input { width: 100%; min-width: 0; height: 54px; border: 0; border-radius: 20px; background: var(--gray-200); color: var(--gray-800); padding: 12px 16px; font-size: var(--t3); font-weight: 400; outline-offset: 2px; } /* iOS Safari: 16px 미만이면 포커스 시 자동 확대 */
 .ingredient-edit-field input:focus { background: var(--blue-100); outline: 2px solid var(--blue-500); }
 .ingredient-edit-field input:disabled { opacity: 1; background: var(--gray-500, #d1d3d8); -webkit-text-fill-color: var(--gray-800); }
 .ingredient-edit-quantity { display: flex; gap: 8px; }
