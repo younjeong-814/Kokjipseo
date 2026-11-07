@@ -50,38 +50,37 @@ test('self-test never accepts a client supplied account or recipient and binds a
  assert.ok(calls.every(call=>call.body.p_user_id==='account-a'&&call.url.includes('_for_user')));
 });
 
-test('Gmail transport: server OAuth, UTF-8 MIME, token reuse and no reminder dispatch',async()=>{
- const env={GMAIL_CLIENT_ID:'test-client',GMAIL_CLIENT_SECRET:'test-secret',GMAIL_REFRESH_TOKEN:'test-refresh',GMAIL_SENDER_EMAIL:'team@example.com'};
+test('Gmail SMTP transport: app password config, UTF-8 message and no reminder dispatch',async()=>{
+ const env={GMAIL_USER:'team@example.com',GMAIL_APP_PASSWORD:'abcd efgh ijkl mnop'};
  assert.equal(createGmailVerificationTransport({}),null);
- const requests=[];
- const transport=createGmailVerificationTransport(env,async(url,options)=>{
-  requests.push({url,options});
-  return Response.json(url.includes('oauth2')?{access_token:'test-access',expires_in:3600}:{id:'mail-id'});
- });
+ assert.equal(createGmailVerificationTransport({GMAIL_USER:'team@example.com'}),null);
+ assert.equal(createGmailVerificationTransport({GMAIL_USER:'not-an-email',GMAIL_APP_PASSWORD:'x'}),null);
+ const sent=[];
+ const transport=createGmailVerificationTransport(env,async message=>{sent.push(message);return {accepted:[message.to],messageId:'mail-id'};});
  await transport({kind:'verification',to:'tester@example.com',code:'123456'},'request-1');
  await transport({kind:'verification',to:'tester@example.com',code:'654321'},'request-2');
- assert.equal(requests.length,3);
- assert.equal(requests[0].options.body.get('grant_type'),'refresh_token');
- assert.equal(requests[0].options.body.get('refresh_token'),'test-refresh');
- const raw=JSON.parse(requests[1].options.body).raw;
- assert.match(raw,/^[A-Za-z0-9_-]+$/);
- const mime=Buffer.from(raw,'base64url').toString('utf8');
- assert.match(mime,/To: tester@example.com\r\n/);
- assert.match(mime,/Subject: =\?UTF-8\?B\?/);
- assert.match(Buffer.from(mime.split('\r\n\r\n')[1],'base64').toString('utf8'),/인증번호는 123456/);
- assert.equal(requests[1].options.headers.Authorization,'Bearer test-access');
+ assert.equal(sent.length,2);
+ assert.deepEqual(sent[0].from,{name:'콕집서',address:'team@example.com'});
+ assert.equal(sent[0].to,'tester@example.com');
+ assert.equal(sent[0].subject,'[콕집서] 이메일 인증번호 안내');
+ assert.match(sent[0].text,/인증번호는 123456/);
+ assert.match(sent[1].text,/인증번호는 654321/);
  await assert.rejects(()=>transport({kind:'verification',to:'bad\r\nBcc: victim@example.com',code:'123456'},'bad'),/invalid_verification_mail/);
  await assert.rejects(()=>transport({kind:'reminder'},'reminder'),/not_enabled/);
- assert.equal(requests.length,3);
+ assert.equal(sent.length,2);
 });
-test('Gmail transport hides upstream secrets and never retries a failed send',async()=>{
- const env={GMAIL_CLIENT_ID:'test-client',GMAIL_CLIENT_SECRET:'test-secret',GMAIL_REFRESH_TOKEN:'test-refresh',GMAIL_SENDER_EMAIL:'team@example.com'};
- let calls=0;
- const transport=createGmailVerificationTransport(env,async(url)=>{
-  calls++;return url.includes('oauth2')?Response.json({access_token:'test-access',expires_in:3600}):Response.json({error:'private-provider-data'},{status:429});
- });
- await assert.rejects(()=>transport({kind:'verification',to:'tester@example.com',code:'123456'},'request'),/^Error: gmail_send_failed$/);
- assert.equal(calls,2);
+test('Gmail SMTP transport hides provider errors and never retries a failed send',async()=>{
+ const env={GMAIL_USER:'team@example.com',GMAIL_APP_PASSWORD:'abcdefghijklmnop',GMAIL_SENDER_EMAIL:'alias@example.com'};
+ let calls=0;const logs=[];const warn=console.warn;console.warn=(...args)=>logs.push(args.join(' '));
+ try{
+  const failing=createGmailVerificationTransport(env,async message=>{calls++;assert.equal(message.from.address,'alias@example.com');const e=new Error('535 private-provider-data tester@example.com');e.code='EAUTH';e.responseCode=535;throw e;});
+  await assert.rejects(()=>failing({kind:'verification',to:'tester@example.com',code:'123456'},'request'),/^Error: gmail_send_failed$/);
+  assert.equal(calls,1);
+  assert.equal(logs.length,1);assert.match(logs[0],/"code":"EAUTH"/);assert.match(logs[0],/"responseCode":535/);
+  assert.doesNotMatch(logs[0],/private-provider-data|tester@example\.com|abcdefgh/);
+  const unconfirmed=createGmailVerificationTransport(env,async()=>({accepted:[],rejected:['tester@example.com']}));
+  await assert.rejects(()=>unconfirmed({kind:'verification',to:'tester@example.com',code:'123456'},'request'),/^Error: gmail_send_unconfirmed$/);
+ }finally{console.warn=warn;}
 });
 const db=new PGlite();
 const a='10000000-0000-4000-8000-000000000001',b='10000000-0000-4000-8000-000000000002';
