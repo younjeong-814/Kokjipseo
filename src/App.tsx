@@ -16,7 +16,7 @@ import { toRecipeDetail, toRecipeSummary } from './features/recipe/apiPresentati
 import type { Recipe } from './features/recipe/types';
 import { RecipePage } from './features/recipe/RecipePage';
 import { RecipeResults } from './features/recipe/RecipeResults';
-import { matchIngredient } from './features/ingredients/classify';
+import { recipeSearchKeyword } from './features/ingredients/classify';
 import { RecipeNoUrgentPage } from './features/recipe/RecipeNoUrgentPage';
 import { selectRecipeIngredients } from './features/recipe/selectRecipeIngredients';
 import { FridgePage } from './features/fridge/FridgePage';
@@ -132,7 +132,7 @@ export function App() {
   if (screen === 'recipe-results') {
     const selected = (recipeSelection ?? []).flatMap(id => ingredientItems.filter(item => item.id === id));
     if (!selected.length) return null;
-    const names = [...new Set(selected.map(item => matchIngredient(item.name)?.keyword ?? item.name.trim()))];
+    const names = [...new Set(selected.map(item => recipeSearchKeyword(item.name)))];
     return <div className="app-shell"><RecipeResults key={JSON.stringify(names)} ingredients={names} selectionContext={{ selected, onBack: () => navigate('recipe'), onReselect: () => navigate('recipe') }} renderResults={(data, pagination) => <><RecipeResultsPage total={data.total} recipes={data.recipes.map(recipe => toRecipeSummary(recipe, names))} selectedIngredients={selected.map(item => item.name)} onBack={() => navigate('recipe')} onOpen={id => { const recipe = data.recipes.find(item => item.id === id); if (recipe) { setOpenedRecipe(recipe); window.location.hash = `recipe-detail?recipe=${encodeURIComponent(id)}`; } }} footer={<footer className="recipe-results-footer">{pagination}<p className="recipe-source">출처: 농림수산식품교육문화정보원</p></footer>} /></>} /><BottomNavigation screen={screen} navigate={navigate} /></div>;
   }
   if (screen === 'settings') {
@@ -149,7 +149,7 @@ export function App() {
     // 재료 선택 화면과 같은 순서(임박순)로 보여준다.
     const selected = (recipeSelection ?? []).flatMap(id => ingredientItems.filter(item => item.id === id));
     if (!selected.length) return null;
-    const names = [...new Set(selected.map(item => matchIngredient(item.name)?.keyword ?? item.name.trim()))];
+    const names = [...new Set(selected.map(item => recipeSearchKeyword(item.name)))];
     return <div className="app-shell"><RecipeResults key={JSON.stringify(names)} ingredients={names} selectionContext={{ selected, onBack: () => navigate('recipe'), onReselect: () => navigate('recipe') }} /></div>;
   }
   // 식재료는 있지만 D-3 이내·기한경과 재료가 없으면 탭바 없는 안내 화면을 보여준다. 식재료가 아예 없으면 아래 RecipeEmptyPage.

@@ -9,7 +9,9 @@ export const BASIC_GRID = 'Grid_20150827000000000226_1';
 const PAGE_SIZE = 1000, MAX_ROWS = 10000;
 type Row = Record<string, unknown>;
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '';
-export const canonical = (value: string) => value.normalize('NFC').toLowerCase().replace(/\s+/g, '').replace(/계란/g, '달걀').replace(/쇠고기/g, '소고기');
+// 같은 재료의 다른 표기. 검색어와 레시피 원문에 똑같이 적용한다.
+const SPELLINGS: [RegExp, string][] = [[/계란|유정란/g, '달걀'], [/쇠고기/g, '소고기'], [/고추가루/g, '고춧가루'], [/후추가루/g, '후춧가루'], [/케찹/g, '케첩'], [/쭈꾸미/g, '주꾸미'], [/요구르트/g, '요거트'], [/모짜렐라/g, '모차렐라'], [/소세지/g, '소시지'], [/돈까스/g, '돈가스'], [/참치캔|캔참치/g, '참치']];
+export const canonical = (value: string) => SPELLINGS.reduce((text, [from, to]) => text.replace(from, to), value.normalize('NFC').toLowerCase().replace(/\s+/g, ''));
 function imageUrl(value: unknown) {
   try { const url = new URL(text(value)); if (!['http:', 'https:'].includes(url.protocol)) return ''; if (url.hostname.endsWith('.foodsafetykorea.go.kr')) url.protocol = 'https:'; return url.toString(); } catch { return ''; }
 }

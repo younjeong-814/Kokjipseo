@@ -192,6 +192,18 @@ test('search calls only food safety and the optional basic grid, filters all ing
   assert.equal(calls.length, 2);
   assert.ok(calls.every(url => !url.includes('00227') && !url.includes('00228')));
 });
+test('ingredient search treats spelling variants as the same ingredient in both directions', async () => {
+  const rows = [['1', '고춧가루 5g, 케첩 10g'], ['2', '주꾸미 100g, 요거트 50g'], ['3', '달걀 1개, 캔참치 1개'], ['4', '모차렐라치즈 30g, 소시지 2개, 돈가스 1장']]
+    .map(([id, parts]) => ({ ...row(id), RCP_PARTS_DTLS: parts }));
+  const search = api.createRecipeSearch('food-test', async () => response(foodPayload(rows)));
+  const ids = async names => (await search(names)).recipes.map(recipe => recipe.id);
+  assert.deepEqual(await ids(['고추가루', '케찹']), ['1']);
+  assert.deepEqual(await ids(['쭈꾸미', '요구르트']), ['2']);
+  assert.deepEqual(await ids(['유정란', '참치캔']), ['3']);
+  assert.deepEqual(await ids(['모짜렐라치즈', '소세지', '돈까스']), ['4']);
+  assert.equal(api.canonical('후추가루'), api.canonical('후춧가루'));
+});
+
 test('basic API failures do not block main recipes or return fake matched values', async () => {
   const search = api.createRecipeSearch('food-test', async url => response(url.includes('COOKRCP01') ? foodPayload([row(1)]) : { result: { code: 'INFO-100' } }), 'basic-test');
   const result = await search(['대파']);
