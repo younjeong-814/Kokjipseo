@@ -100,6 +100,8 @@
 .email-reminder-timer { color:var(--blue-500); }
 .email-reminder-links { min-height:24px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
 .email-reminder-links button { padding:0; background:transparent; color:var(--blue-500); font-size:var(--t1); line-height:var(--lh1); }
+.email-reminder-links button:disabled { color:var(--gray-700); cursor:default; }
+.email-reminder-resend-note { padding:0 20px; color:var(--gray-800); font-size:var(--t1); line-height:var(--lh1); }
 .email-reminder-test-note { color:var(--gray-700); }
 .email-reminder-footer {
   padding:16px 20px;
