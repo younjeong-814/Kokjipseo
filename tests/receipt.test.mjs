@@ -96,3 +96,23 @@ test('drops receipt notice sentences even when numbers follow them', () => {
   ]);
   assert.deepEqual(items.map(({ name }) => name), ['두부']);
 });
+
+test('keeps items whose amount carries a tax mark such as 1,980s', () => {
+  const { items } = parseReceipt([
+    '상품명 수량 단가 금액',
+    '백설콩식용유1.8L',
+    '8801007402345 1 3,250 3,250s',
+    '곰표튀김가루1kg',
+    '8801176250020 1 1,250 1,250s',
+    'N)고래밥볶음4P2700',
+    '8801117115302 2 990 1,980 s',
+    '대파',
+    '201017 * 1 990 990',
+    '미닛메이드제주감귤1.5L',
+    '8801094626402 1 990 990s',
+    '합계 8,450',
+  ]);
+  assert.deepEqual(items.map(({ name, quantity }) => [name, quantity]), [
+    ['백설콩식용유', 1], ['곰표튀김가루', 1], ['N 고래밥볶음4P2700', 2], ['대파', 1], ['미닛메이드제주감귤', 1],
+  ]);
+});

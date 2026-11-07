@@ -102,7 +102,7 @@ Supabase 프로젝트 → Edge Functions → Secrets에서 다음 **이름**으�
 | FOOD_SAFETY_API_KEY | 식품안전나라 COOKRCP01 승인된 키 |
 | FOOD_API_KEY | 기존 농식품 API 시간·난이도 보완용 선택 키. 실제 문서·연결 확인 후에만 사용 |
 | GOOGLE_VISION_API_KEY | 영수증 DOCUMENT_TEXT_DETECTION |
-| GEMINI_API_KEY | 사진 속 식재료 분석용 Google Gemini 키 |
+| GEMINI_API_KEY | 사진 속 식재료 분석, 영수증 품목 정리(ocr 함수)용 Google Gemini 키. 없으면 영수증은 규칙 파서로만 정리 |
 | GEMINI_MODEL | 해당 프로젝트에서 이미지 입력·구조화 출력을 지원하는 실제 모델 ID |
 | ALLOWED_ORIGINS | 허용할 정확한 Origin을 쉼표로 구분. URL 경로·와일드카드는 넣지 않음 |
 | EXTERNAL_API_MODE | 검증용 `mock` 또는 실연결 `live`. 키 누락 시 자동 모의 응답으로 대체하지 않음 |
