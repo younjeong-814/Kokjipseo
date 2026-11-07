@@ -30,11 +30,14 @@
 .manual-quantity input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 .manual-quantity input[type="number"]::-webkit-inner-spin-button, .manual-quantity input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .manual-unit { position: relative; display: flex; width: 83px; flex-shrink: 0; border-radius: var(--r3); background: var(--gray-200); }
+/* Figma Dropdown trigger state=Pressed(3418:16095): 누르는 동안과 메뉴가 열린 동안 */
+.manual-unit:has(> button:active), .manual-unit:has(> button[aria-expanded="true"]) { background: var(--gray-500, #d1d3d8); }
 .manual-unit > button { width: 100%; height: 54px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0; border-radius: var(--r3); background: transparent; color: var(--gray-900); }
 .manual-unit > button span { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
 .manual-unit > input { width: 48px; min-width: 0; padding: 0; border: 0; background: transparent; text-align: right; }
 .manual-unit:has(> input) > button { width: 35px; }
-.manual-unit-menu { position: absolute; top: 36px; right: 0; width: 161px; padding: 8px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--gray-400); border-radius: 8px; background: white; box-shadow: 0 4px 12px #0000001f; z-index: 2; }
+/* 단위 버튼 위로 펼친다. 아래로 펼치면 소비 권장일 칸을 가린다. */
+.manual-unit-menu { position: absolute; bottom: calc(100% + 4px); right: 0; width: 161px; padding: 8px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--gray-400); border-radius: 8px; background: white; box-shadow: 0 4px 12px #0000001f; z-index: 2; }
 .manual-unit-menu button { height: 36px; flex-shrink: 0; padding: 10px; text-align: left; border-radius: 4px; background: white; color: var(--gray-900); font-size: var(--t2); line-height: var(--lh2); }
 .manual-unit-menu button[aria-selected="true"] { background: var(--blue-50); color: var(--blue-500); font-weight: 700; }
 .manual-unit-menu button:hover { background: var(--blue-50); }
