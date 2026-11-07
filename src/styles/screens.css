@@ -93,7 +93,6 @@
 .camera-view { flex: 1; min-height: 728px; background: #20262d; display: flex; flex-direction: column; overflow: hidden; color: white; }
 .camera-guide-bar { height: 64px; padding: 0 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
 .camera-guide-bar p { flex: 1; font-size: var(--t2); line-height: var(--lh2); text-align: center; }
-.camera-flash { width: 24px; height: 24px; padding: 0; background: none; display: flex; flex-shrink: 0; }
 .camera-preview { position: relative; height: 436px; flex-shrink: 0; background: #353c44; overflow: hidden; }
 .receipt-guide-frame { position: absolute; left: 50%; top: 17px; margin-left: -133px; }
 .camera-controls { flex: 1; padding-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; background: #20262d; }
@@ -106,7 +105,7 @@
 .camera-shutter:disabled { opacity: .5; cursor: default; }
 .camera-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 .camera-message { position: absolute; inset: 0; padding: 0 40px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: pre-line; font-size: var(--t2); line-height: var(--lh2); color: #dce0e5; background: rgb(32 38 45 / .72); }
-.camera-flash:disabled, .camera-album:disabled { opacity: .5; cursor: default; }
+.camera-album:disabled { opacity: .5; cursor: default; }
 .camera-review-actions { gap: var(--s3); }
 .camera-review-actions .action-button { height: 56px; }
 .camera-review-actions .action-button:disabled { background: #353c44; color: var(--gray-700); }
