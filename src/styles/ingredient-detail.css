@@ -11,9 +11,19 @@
 .detail-remaining-headline { display: flex; align-items: center; gap: 6px; }
 .detail-remaining-headline strong { font-size: 32px; font-weight: 800; line-height: 42px; color: var(--blue-500); }
 .detail-remaining-headline b { font-size: 24px; line-height: 32px; }
-.detail-remaining input { display: block; appearance: none; width: 100%; height: 28px; margin: 9px 0; background: transparent; cursor: pointer; }
+.detail-remaining input { display: block; -webkit-appearance: none; appearance: none; width: 100%; height: 28px; margin: 9px 0; background: transparent; cursor: pointer; }
 .detail-remaining input::-webkit-slider-runnable-track { height: 4px; border-radius: 5px; background: linear-gradient(to right, var(--blue-500) var(--remaining), var(--gray-200) var(--remaining)); }
-.detail-remaining input::-webkit-slider-thumb { appearance: none; width: 28px; height: 28px; margin-top: -12px; background: var(--detail-thumb) center / 28px 28px no-repeat; }
+.detail-remaining input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  background: transparent var(--detail-thumb) center / 28px 28px no-repeat;
+}
 .detail-remaining input::-moz-range-track { height: 4px; background: var(--gray-200); }
 .detail-remaining input::-moz-range-progress { height: 4px; background: var(--blue-500); }
 .detail-remaining input::-moz-range-thumb { border: 0; width: 28px; height: 28px; background: var(--detail-thumb) center / 28px 28px no-repeat; }
