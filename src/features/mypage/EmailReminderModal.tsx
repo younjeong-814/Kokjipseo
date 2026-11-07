@@ -88,7 +88,7 @@ export function EmailReminderModal({onClose, mode = 'apply'}:{onClose:()=>void; 
       :<div className="email-reminder-fields">
         {step==='email'?<>
           <EmailReminderField id="reminder-email" label="알림 받을 이메일" placeholder="이메일 주소를 입력해 주세요" value={email} disabled={busy} onChange={value=>{setEmail(value);setError('');}}/>
-          <label className="email-reminder-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>소비 권장일 이메일 알림 수신에 동의해요.<small>알림은 설정에서 언제든 끌 수 있어요. (동의문 버전: v1)</small></span></label>
+          <label className="email-reminder-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>소비 권장일 이메일 알림 수신에 동의해요.<small>알림은 설정에서 언제든 끌 수 있어요.</small></span></label>
           <p>새 이메일 인증이 끝나기 전에는 기존 알림 주소를 유지해요. Google 로그인 계정은 변경되지 않아요.</p>
         </>:<>
           <EmailReminderField id="reminder-code" label="인증번호" placeholder="숫자 6자리 입력" value={code} disabled={step==='expired'||busy} onChange={value=>{setCode(value.replace(/\D/g,'').slice(0,6));setError('');}}/>
