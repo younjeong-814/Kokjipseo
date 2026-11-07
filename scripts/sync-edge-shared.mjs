@@ -7,6 +7,7 @@ const files={
   'ingredientText.ts':readFileSync('src/features/recipe/ingredientText.ts','utf8'),
   'recipeEnrichment.ts':readFileSync('server/recipeEnrichment.ts','utf8').replace("'../src/features/recipe/types'","'./recipeTypes.ts'"),
   'recipes.ts':readFileSync('server/recipes.ts','utf8').split('export function recipesMiddleware')[0].replace(/^import type \{ IncomingMessage, ServerResponse \} from 'node:http';\r?\n/,'').replace("'../src/features/recipe/types'","'./recipeTypes.ts'").replace("'./recipeEnrichment'","'./recipeEnrichment.ts'").replace("'../src/features/recipe/ingredientText'","'./ingredientText.ts'"),
+  'receiptParse.ts':readFileSync('src/features/receipt/parseReceipt.ts','utf8'),
   'vision.ts':readFileSync('server/visionOcr.ts','utf8').split(/(?:export )?function readBody/)[0].replace(/^import type \{ IncomingMessage, ServerResponse \} from 'node:http';\r?\n/m,'').replace('const MAX_BODY = 8 * 1024 * 1024;',''),
 };
 for(const [name,source] of Object.entries(files)){
