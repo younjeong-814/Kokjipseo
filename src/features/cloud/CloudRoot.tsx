@@ -8,6 +8,7 @@ import { StorageContext } from './StorageContext';
 import { CloudStorage, cacheKey, preservePendingBeforeReload } from './storage';
 import { mergeSnapshots, parseBackup, snapshotKeys, validateSnapshot, type Snapshot } from './snapshot';
 import { DataBackupSheet, type UnsavedNotice } from './DataBackupSheet';
+import { downloadInExternalBrowser, isAndroidInApp } from './externalDownload';
 import { archiveLocalRecords, mergeGuestRecords, stashGuestRecords, takeGuestRecords, takeLocalRecords } from './guestTransfer';
 
 import { AccountContext } from './AccountContext';
@@ -24,7 +25,7 @@ function download(name:string, value:string) {
   const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
 }
 type SaveFailure={title:string;description:string;action:string;onAction:()=>void};
-type DataManagement={failure:SaveFailure|null;unsaved:UnsavedNotice|null;onExport:()=>void;onImport:(file:File)=>Promise<void>};
+type DataManagement={failure:SaveFailure|null;unsaved:UnsavedNotice|null;onExport:()=>Promise<void>;onImport:(file:File)=>Promise<void>};
 const savedTime=new Intl.DateTimeFormat('ko-KR',{hour:'numeric',minute:'2-digit'});
 const savedDate=new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric'});
 function formatSavedAt(date:Date){return `${date.toDateString()===new Date().toDateString()?'오늘':savedDate.format(date)} ${savedTime.format(date)}`;}
@@ -96,7 +97,7 @@ function AccountBar({session,data,children}: {session:Session|null;data?:DataMan
     <div className="settings-spacer" aria-hidden="true" />
     <div className="settings-logout-group"><button type="button" className="settings-logout" onClick={()=>void signOut()}>로그아웃</button></div>
     {error&&<p role="alert">{error}</p>}
-    {backupOpen && <DataBackupSheet unsaved={data.unsaved} busy={importing} onClose={()=>setBackupOpen(false)} onExport={data.onExport} onImport={async file=>{
+    {backupOpen && <DataBackupSheet unsaved={data.unsaved} busy={importing} onClose={()=>setBackupOpen(false)} onExport={()=>{setError('');data.onExport().catch(e=>setError(e instanceof Error?e.message:'백업 파일을 내보내지 못했어요.'))}} onImport={async file=>{
       setImporting(true);setError('');
       try{await data.onImport(file);setBackupOpen(false);}catch(e){setError(e instanceof Error?e.message:'기록을 불러오지 못했어요.');}
       finally{setImporting(false);}
@@ -181,9 +182,14 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
     const retrySave=()=>{if(!stopped)void flush()};window.addEventListener('online',retrySave);
     return()=>{cancelled=true;clearTimeout(timer);window.removeEventListener('online',retrySave)};
   },[session.user.id,retry]);
-  const backup=()=>download('kokjipseo-cloud-backup.json',localStorage.getItem(cacheKey(session.user.id))??'{}');
+  const backup=async()=>{
+    const name='kokjipseo-cloud-backup.json',value=localStorage.getItem(cacheKey(session.user.id))??'{}';
+    // 안드로이드 인앱 브라우저는 blob 다운로드가 막혀 외부 브라우저에서 받게 한다.
+    if(isAndroidInApp())return downloadInExternalBrowser(name,value);
+    download(name,value);
+  };
   const reloadRemote=()=>{try{preservePendingBeforeReload(localStorage,session.user.id);setStorage(null);setError('');setConflict(false);setRetry(n=>n+1)}catch{setError('미전송 기록을 별도 보관하지 못했어요. 먼저 파일로 백업해 주세요.')}};
-  if(!storage) return <main className="cloud-account"><p role={error?'alert':'status'}>{error||'계정의 냉장고를 불러오는 중이에요'}</p>{error&&<><button onClick={backup}>이 기기 기록 백업</button><button onClick={()=>setRetry(n=>n+1)}>다시 연결</button><button onClick={reloadRemote}>미전송 기록 별도 보관 후 서버 다시 불러오기</button>{!session.user.is_anonymous && <button onClick={()=>void supabase!.auth.signOut({scope:'local'})}>로그아웃</button>}</>}</main>;
+  if(!storage) return <main className="cloud-account"><p role={error?'alert':'status'}>{error||'계정의 냉장고를 불러오는 중이에요'}</p>{error&&<><button onClick={()=>void backup().catch(e=>setError(e instanceof Error?e.message:'백업 파일을 내보내지 못했어요.'))}>이 기기 기록 백업</button><button onClick={()=>setRetry(n=>n+1)}>다시 연결</button><button onClick={reloadRemote}>미전송 기록 별도 보관 후 서버 다시 불러오기</button>{!session.user.is_anonymous && <button onClick={()=>void supabase!.auth.signOut({scope:'local'})}>로그아웃</button>}</>}</main>;
   const unsavedCount=storage.pending?storage.snapshot().activities.filter(raw=>!observed.current.has((raw as {id:string}).id)).length:0;
   // 다른 기기와 충돌하면 재시도가 계속 실패하므로 '다시 시도'는 미전송 기록을 보관한 뒤 서버 기록을 다시 불러온다.
   const retrySave=conflict?reloadRemote:()=>trigger.current();
@@ -204,13 +210,13 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
         <p role={error ? 'alert' : 'status'}>{error || status}</p>
       </div><h2 className="settings-section-title">데이터 관리</h2><div className="settings-data-actions">
       <button onClick={()=>trigger.current()}>저장 재시도</button>
-      <button onClick={backup}>이 기기 기록 백업</button>
+      <button onClick={()=>void backup().catch(e=>setError(e instanceof Error?e.message:'백업 파일을 내보내지 못했어요.'))}>이 기기 기록 백업</button>
       {error&&<button onClick={reloadRemote}>미전송 기록 별도 보관 후 서버 다시 불러오기</button>}
       
     </div></AccountBar>}>
     {children}
     <UTTracker userId={session.user.id}/>
-    {error&&<aside className="cloud-save-warning" role="alert">{error}<button onClick={backup}>기록 백업</button></aside>}
+    {error&&<aside className="cloud-save-warning" role="alert">{error}<button onClick={()=>void backup().catch(e=>setError(e instanceof Error?e.message:'백업 파일을 내보내지 못했어요.'))}>기록 백업</button></aside>}
     </AccountContext.Provider>
   </StorageContext.Provider>;
 }

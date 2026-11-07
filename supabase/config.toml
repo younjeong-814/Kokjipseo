@@ -15,3 +15,6 @@ verify_jwt = false
 # Server only; validates x-cron-secret. Never accepts an ordinary browser session as authorization.
 [functions.email-reminder-worker]
 verify_jwt = false
+# Token-only one-time backup download for Android in-app browsers. No session is available there.
+[functions.export-download]
+verify_jwt = false
