@@ -33,4 +33,3 @@ export async function annotateImage(apiKey: string, image: string): Promise<OcrW
   });
 }
 
-export 
