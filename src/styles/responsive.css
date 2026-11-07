@@ -78,14 +78,12 @@ body { background: var(--gray-0); }
 
 @media (max-width: 359px) {
   .method-grid { gap: 12px; }
-  .method-card { padding: 12px; height: auto; min-height: 144px; }
+  .method-card { padding: 12px; }
   .method-card h3 { font-size: 16px; }
   .recipe-results-page .recipe-result-image,
   .recipe-results-page .recipe-result-card > img { width: 80px; height: 80px; }
   .mypage-empty-copy p, .mypage-update-note { white-space: normal; }
-  /* 좁은 화면에서는 고정 줄바꿈 대신 단어 단위로 자연스럽게 줄바꿈 */
-  .method-card p br { display: none; }
-  .method-card p, .expiring-modal-heading h2, .expiring-modal-heading p, .mypage-score-copy p, .mypage-score-copy strong, .mypage-score-copy small { word-break: keep-all; }
+  .expiring-modal-heading h2, .expiring-modal-heading p, .mypage-score-copy p, .mypage-score-copy strong, .mypage-score-copy small { word-break: keep-all; }
 }
 .app-shell > main > .sub-header,
 .app-shell > main.fridge-page > .screen-tabs {
