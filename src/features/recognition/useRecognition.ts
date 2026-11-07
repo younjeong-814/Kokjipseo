@@ -41,17 +41,17 @@ export function useRecognition() {
       setPendingName(name);
     },
     remove: (id: number) => setItems(current => current.filter(item => item.id !== id)),
-    // 냉장고 칸·상품 촬영은 이름만 인식하므로 수량은 1개로 둔다.
+    // 냉장고 칸·상품 촬영은 개수를 믿기 어려우니 수량은 1개로 두고, 영수증처럼 사전에 없는 이름만 오류로 표시한다.
     showDetected: (names: (string | PhotoRecognitionItem)[]) => {
       setSource('camera');
       start(names.map((value, id) => {
-        if (typeof value !== 'string') return {...value,id,image:categoryImage(value.category),error:value.uncertain,corrected:false};
+        if (typeof value !== 'string') return {...value,id,quantity:1,image:categoryImage(value.category),error:!matchIngredient(value.name),corrected:false};
         const name = value;
         const category = classifyIngredient(name);
         return { id, name, quantity: 1, category, image: categoryImage(category), error: !matchIngredient(name), corrected: false };
       }), now());
     },
-    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,id,image:categoryImage(item.category),error:item.uncertain,corrected:false})),now());},
+    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,id,quantity:1,image:categoryImage(item.category),error:!matchIngredient(item.name),corrected:false})),now());},
     showReceipt: (result: ReceiptResult) => {
       const at = now();
       setSource('receipt');
