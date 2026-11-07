@@ -64,6 +64,7 @@ export function App() {
   const [searchText, setSearchText] = useState('');
   const [captureGuide, setCaptureGuide] = useState<ScreenId>('guide-receipt');
   const [showRegistrationToast, setShowRegistrationToast] = useState(false);
+  const [detailSavedDestination, setDetailSavedDestination] = useState<'fridge-registered' | 'fridge-food' | null>(null);
   const [listDeletion, setListDeletion] = useState<{ storage: typeof storage; message: string; removed?: RemovedIngredient }>();
   const ingredients = useIngredients();
   const dashboard = useDashboardReports(ingredients.items, ingredients.error);
@@ -83,11 +84,20 @@ export function App() {
   const recognition = useRecognition();
   useEffect(()=>{ const open=(event:Event)=>{setOpenedRecipe((event as CustomEvent<Recipe>).detail);window.location.hash='recipe-detail?recipe='+encodeURIComponent((event as CustomEvent<Recipe>).detail.id);};window.addEventListener('kokjipseo:open-saved-recipe',open);return()=>window.removeEventListener('kokjipseo:open-saved-recipe',open);},[]);
   useEffect(() => {
-    const onHashChange = () => { const nextScreen = readScreen(); setScreen(nextScreen); setDetailId(readDetailId()); setListDeletion(undefined); if (nextScreen !== 'fridge-registered' && nextScreen !== 'fridge-food') setShowRegistrationToast(false); window.scrollTo(0, 0); };
+    const onHashChange = () => {
+      const nextScreen = readScreen();
+      setScreen(nextScreen);
+      setDetailId(readDetailId());
+      setListDeletion(undefined);
+      setDetailSavedDestination(destination => destination === nextScreen ? destination : null);
+      if (nextScreen !== 'fridge-registered' && nextScreen !== 'fridge-food') setShowRegistrationToast(false);
+      window.scrollTo(0, 0);
+    };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
   const deleteFromList = (id: string) => {
+    setDetailSavedDestination(null);
     try {
       const removed = ingredients.removeFromList(id);
       if (!removed) return;
@@ -178,7 +188,12 @@ export function App() {
   }
   if (screen === 'ingredient-detail') {
     const item = ingredients.items.find(value => value.id === detailId);
-    return <div className="app-shell">{item ? <IngredientDetailPage key={item.id} item={item} onBack={() => navigate(detailOrigin)} onEdit={patch => ingredients.updateInfo(item.id, patch)} onSave={patch => ingredients.updateDetails(item.id, patch)} onCondition={status => ingredients.recordCondition(item.id, status)} onDiscard={() => { ingredients.remove(item.id); navigate(detailOrigin); }} onConsume={() => { ingredients.consume(item.id); navigate(detailOrigin); }} /> : <main className="ingredient-not-found"><p role="alert">{ingredients.error || '식재료를 찾을 수 없어요. 삭제된 항목인지 확인해 주세요.'}</p><button onClick={() => navigate('fridge')}>냉장고로 돌아가기</button></main>}</div>;
+    return <div className="app-shell">{item ? <IngredientDetailPage key={item.id} item={item} onBack={() => navigate(detailOrigin)} onEdit={patch => ingredients.updateInfo(item.id, patch)} onSave={patch => {
+      ingredients.updateDetails(item.id, patch);
+      const destination = isFood(item) ? 'fridge-food' : 'fridge-registered';
+      setDetailSavedDestination(destination);
+      navigate(destination);
+    }} onCondition={status => ingredients.recordCondition(item.id, status)} onDiscard={() => { ingredients.remove(item.id); navigate(detailOrigin); }} onConsume={() => { ingredients.consume(item.id); navigate(detailOrigin); }} /> : <main className="ingredient-not-found"><p role="alert">{ingredients.error || '식재료를 찾을 수 없어요. 삭제된 항목인지 확인해 주세요.'}</p><button onClick={() => navigate('fridge')}>냉장고로 돌아가기</button></main>}</div>;
   }
   if (screen === 'recipe-no-result') {
     // 재료 선택 화면과 같은 순서(임박순)로 보여준다.
@@ -235,6 +250,7 @@ export function App() {
       {screen === 'mypage' && <MyPage selectedPeriod={myPagePeriod} onPeriodChange={setMyPagePeriod} navigate={navigate} onOpenManaged={period => { setManagedPeriod(period); navigate('weekly-report'); }} report={buildWeeklyReport(ingredients.items, loadHistory(storage))} registeredCount={ingredientItems.length} reports={dashboard.reports} error={dashboard.error} />}
       {screen === 'recipe' && (ingredientItems.length ? <RecipePage items={ingredientItems} initialSelected={recipeSelection} onRecommend={selected => { setRecipeSelection(selected.map(item => item.id)); navigate('recipe-results'); }} /> : <RecipeEmptyPage navigate={navigate} />)}
       <BottomNavigation screen={displayScreen} navigate={navigate} />
+      {screen === detailSavedDestination && <Snackbar variant="success" message="변경한 내용을 저장했어요." onDismiss={() => setDetailSavedDestination(null)} />}
       {listDeletion?.storage === storage && <Snackbar key={listDeletion.removed?.item.id ?? listDeletion.message} message={listDeletion.message} onDismiss={() => setListDeletion(undefined)} figmaNode={listDeletion.removed ? '6792:10117' : undefined} action={listDeletion.removed ? { label: '되돌리기', onClick: undoListDeletion } : undefined} />}
       <FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} />
     </div>
