@@ -4,12 +4,72 @@ import { enrichRecipes, normalizeDifficulty, parseMinutes, type BasicRecipe } fr
 import { splitIngredientText, tokenizeIngredientText } from './ingredientText.ts';
 
 const FOOD_API = 'https://openapi.foodsafetykorea.go.kr/api';
+// 배포된 Edge 함수(v29)에서 쓰던 요청 헤더. 서버 환경의 기본 요청이 거절될 때를 대비해 브라우저와 같은 헤더를 보낸다.
+const FOOD_HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+};
 const MAFRA_API = 'http://211.237.50.150:7080/openapi';
 export const BASIC_GRID = 'Grid_20150827000000000226_1';
 const PAGE_SIZE = 1000, MAX_ROWS = 10000;
 type Row = Record<string, unknown>;
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '';
-export const canonical = (value: string) => value.normalize('NFC').toLowerCase().replace(/\s+/g, '').replace(/계란/g, '달걀').replace(/쇠고기/g, '소고기');
+// 같은 재료의 다른 표기. 검색어와 레시피 원문에 똑같이 적용한다.
+const SPELLINGS: [RegExp, string][] = [[/계란|유정란/g, '달걀'], [/쇠고기/g, '소고기'], [/고추가루/g, '고춧가루'], [/후추가루/g, '후춧가루'], [/케찹/g, '케첩'], [/쭈꾸미/g, '주꾸미'], [/요구르트/g, '요거트'], [/모짜렐라/g, '모차렐라'], [/소세지/g, '소시지'], [/돈까스/g, '돈가스'], [/참치캔|캔참치/g, '참치']];
+export const canonical = (value: string) => SPELLINGS.reduce((text, [from, to]) => text.replace(from, to), value.normalize('NFC').toLowerCase().replace(/\s+/g, ''));
+// 검색어를 품은 다른 재료·표현. 원문에서 이 단어를 지운 뒤 검색어를 찾는다(배 → 양배추·배추 제외, 배와 배추가 함께 든 레시피는 남음).
+// 기준: 냉장고에 그 재료가 있으면 만들 수 있는가. 즙·다진 것처럼 바로 손질해 얻는 것은 두고, 따로 사야 하는 가공품은 뺀다.
+// 후보는 scripts/audit-recipe-search.mjs로 뽑는다.
+const EXCLUDED_WORDS: Record<string, string[]> = {
+  감: ['감자', '감태', '감귤', '감식초', '감말랭이'],
+  배: ['배추', '배춧'],
+  콩: ['땅콩', '콩나물', '콩카세', '콩가루', '콩기름', '콩물', '콩국물', '콩고기'],
+  무: ['무염', '무가당', '무첨가', '무침', '무화과', '율무', '우무', '나무', '무게', '쌈무', '무말랭이', '무장아찌', '무순'],
+  죽: ['반죽', '죽순'],
+  게: ['스파게티', '바게트', '얇게', '굵게', '잘게', '작게', '맞게', '무게', '멍게', '게피'],
+  상추: ['양상추'],
+  소스: ['소스소개'],
+  굴: ['굴소스', '굴림'],
+  이스트: ['페이스트'],
+  돼지: ['돼지호박', '돼지감자'],
+  두유: ['대두유', '노두유'],
+  가지: ['가지색', '두가지', '한가지', '세가지', '여러가지'],
+  고추: ['고추냉이', '고추장', '고추기름', '고추피클'],
+  냉이: ['고추냉이'],
+  포도: ['포도씨유', '건포도', '포도주', '포도식초'],
+  버섯: ['버섯마늘소금'],
+  깨: ['홍두깨', '찰깨빵'],
+  오이: ['오이고추', '오이피클'],
+  보리: ['보리새우', '보리된장'],
+  잣: ['겨잣'],
+  우유: ['아몬드우유', '코코넛우유'],
+  오리: ['오리엔탈'],
+  맛살: ['치맛살'],
+  달래: ['진달래'],
+  토마토: ['토마토케첩', '토마토소스', '토마토페이스트'],
+  버터: ['땅콩버터'],
+  땅콩: ['땅콩버터'],
+  새우: ['새우젓'],
+  멸치: ['멸치액젓', '멸치육수'],
+  사과: ['사과식초', '사과주스'],
+  현미: ['현미유', '현미식초'],
+  레몬: ['레몬주스'],
+  생강: ['생강청'],
+  오렌지: ['오렌지주스'],
+  배추: ['배추김치'],
+  열무: ['열무김치'],
+  깻잎: ['깻잎장아찌'],
+  감자: ['감자전분'],
+  옥수수: ['옥수수전분'],
+  닭: ['닭육수'],
+  쌀: ['쌀국수'],
+  고기: ['콩고기'],
+};
+const excludedWords = new Map(Object.entries(EXCLUDED_WORDS).map(([name, words]) => [canonical(name), words.map(canonical).sort((a, b) => b.length - a.length)]));
+/** canonical로 맞춘 원문에 canonical 검색어가 재료로 들어 있는지. 지운 자리는 공백으로 둬 앞뒤 글자가 새로 이어지지 않게 한다. */
+export function containsIngredient(text: string, name: string) {
+  return (excludedWords.get(name) ?? []).reduce((rest, word) => rest.replaceAll(word, ' '), text).includes(name);
+}
 function imageUrl(value: unknown) {
   try { const url = new URL(text(value)); if (!['http:', 'https:'].includes(url.protocol)) return ''; if (url.hostname.endsWith('.foodsafetykorea.go.kr')) url.protocol = 'https:'; return url.toString(); } catch { return ''; }
 }
@@ -72,8 +132,12 @@ export function createRecipeSearch(foodSafetyKey: string | undefined, fetcher: t
   async function fetchFood() {
     const recipes = new Map<string, Recipe>();
     for (let start = 1; start <= MAX_ROWS; start += PAGE_SIZE) {
-      const response = await fetcher(`${FOOD_API}/${encodeURIComponent(foodSafetyKey!.trim())}/COOKRCP01/json/${start}/${start + PAGE_SIZE - 1}`, { signal: AbortSignal.timeout(15000), redirect: 'error' });
-      if (!response.ok) throw new RecipeApiError(502, '식품안전나라 서버에 연결하지 못했어요.');
+      const response = await fetcher(`${FOOD_API}/${encodeURIComponent(foodSafetyKey!.trim())}/COOKRCP01/json/${start}/${start + PAGE_SIZE - 1}`, { signal: AbortSignal.timeout(15000), redirect: 'error', headers: FOOD_HEADERS });
+      if (!response.ok) {
+        // 상태 코드만 남긴다. 키가 든 요청 URL은 로그에 쓰지 않는다.
+        console.error(`식품안전나라 응답 상태: ${response.status}`);
+        throw new RecipeApiError(502, `식품안전나라 서버에 연결하지 못했어요. (HTTP ${response.status})`);
+      }
       const page = parseFoodPage(await response.json());
       for (const recipe of page.recipes) recipes.set(recipe.id, recipe);
       if (start + PAGE_SIZE - 1 >= page.total) break;
@@ -109,7 +173,10 @@ export function createRecipeSearch(foodSafetyKey: string | undefined, fetcher: t
     if (!names.length || names.length > 10 || names.some(name => typeof name !== 'string' || !name.trim() || name.length > 60 || /[\u0000-\u001f]/.test(name)) || !Number.isInteger(page) || page < 1 || page > 500) throw new RecipeApiError(400, '재료를 1~10개 선택하고 올바른 페이지를 요청해 주세요.');
     if (!foodSafetyKey?.trim()) throw new RecipeApiError(503, '식품안전나라 FOOD_SAFETY_API_KEY를 설정하고 개발 서버를 다시 시작해 주세요.');
     const selected = [...new Set(names.map(canonical))];
-    const matches = (await dataset()).filter(recipe => selected.every(name => canonical(recipe.rawIngredients ?? recipe.ingredients.map(item => item.name).join(' ')).includes(name)));
+    const matches = (await dataset()).filter(recipe => {
+      const text = canonical(recipe.rawIngredients ?? recipe.ingredients.map(item => item.name).join(' '));
+      return selected.every(name => containsIngredient(text, name));
+    });
     return { recipes: matches.slice((page - 1) * 30, page * 30), total: matches.length, page, pageSize: 30 };
   };
 }

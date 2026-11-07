@@ -11,7 +11,7 @@ function loadTs(url) {
   return exports;
 }
 const load = path => loadTs(new URL(path, import.meta.url));
-const { classifyIngredient, isExcludedItem } = load('../src/features/ingredients/classify.ts');
+const { classifyIngredient, isExcludedItem, recipeSearchKeyword } = load('../src/features/ingredients/classify.ts');
 const { validateDraft } = load('../src/features/ingredients/repository.ts');
 const expiry = load('../src/features/ingredients/expiry.ts');
 
@@ -69,6 +69,21 @@ const excluded = [
 for (const [name, expected] of excluded) {
   test(`${name}: ${expected ? '제외' : '식품'}`, () => assert.equal(isExcludedItem(name), expected));
 }
+
+// 레시피 검색어: 묶음 명사(고기·버섯·나물·면)는 앞 단어로, 형태 명사(가루·소스·젓)는 붙은 이름 그대로 찾는다. 분류는 그대로다.
+for (const [name, expected] of [
+  ['오리고기', '오리'], ['훈제오리고기', '오리'], ['돼지고기', '돼지'], ['닭고기', '닭'],
+  ['소고기', '소고기'], ['양고기', '양고기'], ['고기', '고기'], ['고기 500g', '고기'],
+  ['표고버섯', '표고'], ['국내산 건표고버섯', '표고'], ['새송이버섯', '새송이'], ['목이버섯', '목이버섯'], ['버섯', '버섯'],
+  ['숙주나물', '숙주'], ['참나물', '참나물'], ['콩나물', '콩나물'],
+  ['파스타면', '파스타'], ['우동면', '우동'], ['두부면', '두부면'], ['라면', '라면'], ['소면', '소면'],
+  ['카레가루', '카레가루'], ['고추가루', '고추가루'], ['밀가루', '밀가루'], ['토마토소스', '토마토소스'], ['굴소스', '굴소스'], ['새우젓', '새우젓'], ['멸치액젓', '액젓'],
+  ['단감', '단감'], ['곶감', '곶감'],
+  ['한돈 삼겹살', '삼겹살'], ['대파', '대파'], ['처음 보는 재료', '처음 보는 재료'],
+]) {
+  test(`레시피 검색어 ${name} → ${expected}`, () => assert.equal(recipeSearchKeyword(name), expected));
+}
+test('오리고기는 육류로 분류된다', () => assert.equal(classifyIngredient('오리고기'), '육류'));
 
 test('every dictionary category is a registrable category', () => {
   const source = readFileSync(new URL('../src/features/ingredients/classify.ts', import.meta.url), 'utf8');

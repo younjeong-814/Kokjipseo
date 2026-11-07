@@ -192,6 +192,40 @@ test('search calls only food safety and the optional basic grid, filters all ing
   assert.equal(calls.length, 2);
   assert.ok(calls.every(url => !url.includes('00227') && !url.includes('00228')));
 });
+test('ingredient search treats spelling variants as the same ingredient in both directions', async () => {
+  const rows = [['1', '고춧가루 5g, 케첩 10g'], ['2', '주꾸미 100g, 요거트 50g'], ['3', '달걀 1개, 캔참치 1개'], ['4', '모차렐라치즈 30g, 소시지 2개, 돈가스 1장']]
+    .map(([id, parts]) => ({ ...row(id), RCP_PARTS_DTLS: parts }));
+  const search = api.createRecipeSearch('food-test', async () => response(foodPayload(rows)));
+  const ids = async names => (await search(names)).recipes.map(recipe => recipe.id);
+  assert.deepEqual(await ids(['고추가루', '케찹']), ['1']);
+  assert.deepEqual(await ids(['쭈꾸미', '요구르트']), ['2']);
+  assert.deepEqual(await ids(['유정란', '참치캔']), ['3']);
+  assert.deepEqual(await ids(['모짜렐라치즈', '소세지', '돈까스']), ['4']);
+  assert.equal(api.canonical('후추가루'), api.canonical('후춧가루'));
+});
+
+test('ingredient search skips other ingredients that contain the search word', async () => {
+  const rows = [
+    ['1', '양배추 100g, 배추 1/4통'], ['2', '배 1/2개, 알배추 3장'], ['3', '감자 2개, 감자전분 1큰술'], ['4', '단감 1개'],
+    ['5', '스파게티면 100g, 얇게 썬 마늘'], ['6', '꽃게 2마리'], ['7', '오리엔탈소스 2큰술'], ['8', '훈제오리 100g'],
+    ['9', '고추장 1큰술, 고추냉이 약간'], ['10', '오이고추 2개'], ['11', '레몬즙 1큰술'], ['12', '깨소금 약간'],
+  ].map(([id, parts]) => ({ ...row(id), RCP_PARTS_DTLS: parts }));
+  const search = api.createRecipeSearch('food-test', async () => response(foodPayload(rows)));
+  const ids = async name => (await search([name])).recipes.map(recipe => recipe.id);
+  assert.deepEqual(await ids('배'), ['2']);
+  assert.deepEqual(await ids('감'), ['4']);
+  assert.deepEqual(await ids('게'), ['6']);
+  assert.deepEqual(await ids('오리'), ['8']);
+  assert.deepEqual(await ids('고추'), ['10']);
+  // 바로 손질해 얻는 즙·깨소금은 원재료 검색에 남긴다.
+  assert.deepEqual(await ids('레몬'), ['11']);
+  assert.deepEqual(await ids('깨'), ['12']);
+  // 제외 단어 자체를 고르면 그대로 찾는다.
+  assert.deepEqual(await ids('양배추'), ['1']);
+  // 배와 양배추가 함께 든 원문은 배 검색에 남는다.
+  assert.ok(api.containsIngredient(api.canonical('양배추 100g, 배 1개'), '배'));
+});
+
 test('basic API failures do not block main recipes or return fake matched values', async () => {
   const search = api.createRecipeSearch('food-test', async url => response(url.includes('COOKRCP01') ? foodPayload([row(1)]) : { result: { code: 'INFO-100' } }), 'basic-test');
   const result = await search(['대파']);
