@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStorage } from './features/cloud/StorageContext';
 import { useSavedRecipes } from './features/cloud/SavedRecipes';
 import { BottomNavigation } from './components/BottomNavigation';
+import { Snackbar } from './components/Snackbar';
 
 import { TopHeader } from './components/TopHeader';
 import { HomePage } from './features/home/HomePage';
@@ -33,7 +34,7 @@ import { defaultStorage } from './features/ingredients/expiry';
 import { toDateKey } from './lib/date';
 import { StoredIngredientsPage } from './features/ingredients/StoredIngredientsPage';
 import { useIngredients } from './features/ingredients/useIngredients';
-import type { Ingredient } from './features/ingredients/repository';
+import type { Ingredient, RemovedIngredient } from './features/ingredients/repository';
 import { isFood } from './features/ingredients/expiry';
 import { useDashboardReports } from './features/mypage/useDashboardReports';
 import type { ReportPeriod } from './features/mypage/report';
@@ -61,6 +62,7 @@ export function App() {
   const [searchText, setSearchText] = useState('');
   const [captureGuide, setCaptureGuide] = useState<ScreenId>('guide-receipt');
   const [showRegistrationToast, setShowRegistrationToast] = useState(false);
+  const [listDeletion, setListDeletion] = useState<{ storage: typeof storage; message: string; removed?: RemovedIngredient }>();
   const ingredients = useIngredients();
   const dashboard = useDashboardReports(ingredients.items, ingredients.error);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | undefined>();
@@ -76,10 +78,30 @@ export function App() {
   const recognition = useRecognition();
   useEffect(()=>{ const open=(event:Event)=>{setOpenedRecipe((event as CustomEvent<Recipe>).detail);window.location.hash='recipe-detail?recipe='+encodeURIComponent((event as CustomEvent<Recipe>).detail.id);};window.addEventListener('kokjipseo:open-saved-recipe',open);return()=>window.removeEventListener('kokjipseo:open-saved-recipe',open);},[]);
   useEffect(() => {
-    const onHashChange = () => { const nextScreen = readScreen(); setScreen(nextScreen); setDetailId(readDetailId()); if (nextScreen !== 'fridge-registered' && nextScreen !== 'fridge-food') setShowRegistrationToast(false); window.scrollTo(0, 0); };
+    const onHashChange = () => { const nextScreen = readScreen(); setScreen(nextScreen); setDetailId(readDetailId()); setListDeletion(undefined); if (nextScreen !== 'fridge-registered' && nextScreen !== 'fridge-food') setShowRegistrationToast(false); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+  const deleteFromList = (id: string) => {
+    try {
+      const removed = ingredients.removeFromList(id);
+      if (!removed) return;
+      setShowRegistrationToast(false);
+      setListDeletion({ storage, removed, message: '목록에서 삭제되었어요.' });
+    } catch {
+      setShowRegistrationToast(false);
+      setListDeletion({ storage, message: '삭제하지 못했어요. 다시 시도해 주세요.' });
+    }
+  };
+  const undoListDeletion = () => {
+    if (listDeletion?.storage !== storage || !listDeletion.removed) return;
+    try {
+      ingredients.restoreToList(listDeletion.removed);
+      setListDeletion(undefined);
+    } catch {
+      setListDeletion({ storage, message: '복원하지 못했어요. 저장 설정을 확인해 주세요.' });
+    }
+  };
   const navigate = (destination: ScreenId) => {
     if (destination !== 'manual-entry') setEditingIngredient(undefined);
     if (destination === 'fridge-search' && (screen === 'fridge' || screen === 'fridge-food' || screen === 'fridge-registered')) setSearchOrigin(screen);
@@ -186,14 +208,15 @@ export function App() {
       {isSearching ? <FridgeSearchPage navigate={navigate} initialQuery={searchText} onClose={() => navigate(searchOrigin)} onSearch={raw => { setSearchText(raw); const parsed = parseQuery(raw); if (parsed.type !== 'hold') setSearchQuery(parsed); }} /> : <TopHeader title={info.title} onSettings={screen === 'mypage' ? () => navigate('settings') : undefined} search={screen === 'fridge' || screen === 'fridge-food' || screen === 'fridge-registered' ? additionalConnections.search.destination : undefined} navigate={navigate} />}
       {ingredients.error && <p className="ingredient-error" role="alert">{ingredients.error}</p>}
       {screen === 'home' && <HomePage navigate={navigate} items={ingredients.items} onOpen={item => { setDetailOrigin('home'); openDetail(item); }} />}
-      {searchMatches && 'raw' in searchQuery && (searchMatches.size ? <StoredIngredientsPage key="search" navigate={navigate} items={ingredients.items} matches={searchMatches} onOpen={item => { setDetailOrigin('fridge-search'); openDetail(item); }} onDelete={ingredients.remove} /> : <FridgeSearchEmpty query={searchQuery.raw} onRegister={() => navigate('registration')} />)}
+      {searchMatches && 'raw' in searchQuery && (searchMatches.size ? <StoredIngredientsPage key="search" navigate={navigate} items={ingredients.items} matches={searchMatches} onOpen={item => { setDetailOrigin('fridge-search'); openDetail(item); }} onDelete={deleteFromList} /> : <FridgeSearchEmpty query={searchQuery.raw} onRegister={() => navigate('registration')} />)}
       {isSearching && !searchMatches && <FridgeSearchGuide />}
-      {!isSearching && (displayScreen === 'fridge' || displayScreen === 'fridge-registered') && (ingredientItems.length ? <StoredIngredientsPage key={displayScreen} navigate={navigate} items={ingredientItems} registered={displayScreen === 'fridge-registered'} onOpen={item => { setDetailOrigin(displayScreen === 'fridge-registered' ? 'fridge-registered' : 'fridge'); openDetail(item); }} onDelete={ingredients.remove} /> : <FridgePage navigate={navigate} />)}
-      {!isSearching && displayScreen === 'fridge-food' && (foodItems.length ? <StoredIngredientsPage key="food" food navigate={navigate} items={foodItems} onOpen={item => { setDetailOrigin('fridge-food'); openDetail(item); }} onDelete={ingredients.remove} /> : <FridgeFoodPage navigate={navigate} />)}
+      {!isSearching && (displayScreen === 'fridge' || displayScreen === 'fridge-registered') && (ingredientItems.length ? <StoredIngredientsPage key={displayScreen} navigate={navigate} items={ingredientItems} registered={displayScreen === 'fridge-registered'} onOpen={item => { setDetailOrigin(displayScreen === 'fridge-registered' ? 'fridge-registered' : 'fridge'); openDetail(item); }} onDelete={deleteFromList} /> : <FridgePage navigate={navigate} />)}
+      {!isSearching && displayScreen === 'fridge-food' && (foodItems.length ? <StoredIngredientsPage key="food" food navigate={navigate} items={foodItems} onOpen={item => { setDetailOrigin('fridge-food'); openDetail(item); }} onDelete={deleteFromList} /> : <FridgeFoodPage navigate={navigate} />)}
       {screen === 'registration' && <RegistrationPage navigate={navigate} />}
       {screen === 'mypage' && <MyPage selectedPeriod={myPagePeriod} onPeriodChange={setMyPagePeriod} navigate={navigate} onOpenManaged={period => { setManagedPeriod(period); navigate('weekly-report'); }} report={buildWeeklyReport(ingredients.items, loadHistory(storage))} registeredCount={ingredientItems.length} reports={dashboard.reports} error={dashboard.error} />}
       {screen === 'recipe' && (ingredientItems.length ? <RecipePage items={ingredientItems} initialSelected={recipeSelection} onRecommend={selected => { setRecipeSelection(selected.map(item => item.id)); navigate('recipe-results'); }} /> : <RecipeEmptyPage navigate={navigate} />)}
       <BottomNavigation screen={displayScreen} navigate={navigate} />
+      {listDeletion?.storage === storage && <Snackbar key={listDeletion.removed?.item.id ?? listDeletion.message} message={listDeletion.message} onDismiss={() => setListDeletion(undefined)} figmaNode={listDeletion.removed ? '6792:10117' : undefined} action={listDeletion.removed ? { label: '되돌리기', onClick: undoListDeletion } : undefined} />}
       <FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} />
     </div>
   );

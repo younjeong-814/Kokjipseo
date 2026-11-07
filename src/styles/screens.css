@@ -27,6 +27,8 @@
 .snackbar-success { display: flex; align-items: center; gap: 6px; }
 .snackbar-success-icon { width: 12px; height: 12px; flex-shrink: 0; border-radius: 999px; background: #189129; display: flex; align-items: center; justify-content: center; }
 .snackbar-success-icon img { display: block; }
+.snackbar-action { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.snackbar-action button { background: none; color: var(--orange-500, #fb804a); font: inherit; padding: 0; flex-shrink: 0; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) {
   .registration-toast { animation: none; }
 }

@@ -91,6 +91,26 @@ function storage() {
 }
 const draft = { name: ' 시금치 ', category: '채소', storage: '냉장', quantity: 2, unit: '봉', date: '2026-10-20' };
 
+test('list deletion keeps expired and unexpired items out of consumption and disposal history', () => {
+  const db = storage();
+  const { takeIngredient, restoreIngredient } = exports;
+  const { loadHistory } = loadTs(new URL('../src/features/report/weeklyReport.ts', import.meta.url));
+  const { syncActivities } = loadTs(new URL('../src/features/mypage/activityLog.ts', import.meta.url));
+  const [expired] = saveIngredient(db, { ...draft, date: '2020-01-01' });
+  const [unexpired] = saveIngredient(db, { ...draft, date: '2099-01-01' });
+  const original = loadIngredients(db);
+  syncActivities(db, original, []);
+
+  for (const item of [expired, unexpired]) {
+    const { items, removed } = takeIngredient(db, item.id);
+    assert.equal(loadIngredients(db).some(current => current.id === item.id), false);
+    assert.deepEqual(loadHistory(db), []);
+    assert.deepEqual(syncActivities(db, items, loadHistory(db)).map(activity => activity.type), ['registered', 'registered']);
+    assert.deepEqual(restoreIngredient(db, removed), original);
+    assert.deepEqual(restoreIngredient(db, removed), original);
+  }
+});
+
 const homeExports = {};
 const homeSource = readFileSync(new URL('../src/features/home/selectHomeIngredients.ts', import.meta.url), 'utf8');
 new Function('exports', ts.transpileModule(homeSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(homeExports);

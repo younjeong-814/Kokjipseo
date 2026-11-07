@@ -58,9 +58,26 @@ export function saveIngredient(storage: LocalStorage, draft: IngredientDraft, id
 }
 
 export function deleteIngredient(storage: LocalStorage, id: string): Ingredient[] {
-  const next = loadIngredients(storage).filter(item => item.id !== id);
-  storage.setItem(INGREDIENTS_KEY, JSON.stringify(next));
-  return next;
+  return takeIngredient(storage, id).items;
+}
+
+export type RemovedIngredient = { item: Ingredient; index: number };
+
+export function takeIngredient(storage: LocalStorage, id: string): { items: Ingredient[]; removed?: RemovedIngredient } {
+  const items = loadIngredients(storage);
+  const index = items.findIndex(item => item.id === id);
+  if (index === -1) return { items };
+  const [item] = items.splice(index, 1);
+  storage.setItem(INGREDIENTS_KEY, JSON.stringify(items));
+  return { items, removed: { item, index } };
+}
+
+export function restoreIngredient(storage: LocalStorage, { item, index }: RemovedIngredient): Ingredient[] {
+  const items = loadIngredients(storage);
+  if (items.some(current => current.id === item.id)) return items;
+  items.splice(index, 0, item);
+  storage.setItem(INGREDIENTS_KEY, JSON.stringify(items));
+  return items;
 }
 
 export function updateIngredientDetails(storage: LocalStorage, id: string, patch: { storage: string; date: string; dateSource?: 'manual' | 'automatic'; remainingPercent: number; remainingAdjusted?: boolean }): Ingredient[] {
