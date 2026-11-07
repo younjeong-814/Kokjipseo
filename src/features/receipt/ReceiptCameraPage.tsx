@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SubHeader } from '../../components/SubHeader';
 import { asset } from '../../lib/assets';
 import type { Navigate, ScreenId } from '../../prototype/flow';
-import { fileToJpegBase64, useCamera } from './useCamera';
+import { fileToJpegBase64, MAX_SIDE, useCamera } from './useCamera';
 
 const statusMessages = {
   starting: '카메라를 켜는 중이에요',
@@ -48,6 +48,7 @@ export function ReceiptCameraPage({ navigate, onCapture, backDestination = 'guid
     } finally { setBusy(false); }
   };
   const copy = copies[backDestination as keyof typeof copies] ?? copies['guide-receipt'];
+  const maxSide = backDestination === 'guide-product' ? MAX_SIDE.product : backDestination === 'guide-fridge' ? MAX_SIDE.fridge : MAX_SIDE.receipt;
   const message = busy ? copy.busy : error || notice || (camera.status === 'ready' ? '' : statusMessages[camera.status]);
   return (
     <main className="receipt-camera" data-figma-node="5579:702">
@@ -74,9 +75,9 @@ export function ReceiptCameraPage({ navigate, onCapture, backDestination = 'guid
             <input ref={albumInput} type="file" accept="image/*" hidden onChange={event => {
               const file = event.target.files?.[0];
               event.target.value = '';
-              if (file) void submit(() => fileToJpegBase64(file));
+              if (file) void submit(() => fileToJpegBase64(file, maxSide));
             }} />
-            <button type="button" className="camera-shutter" aria-label={copy.title} disabled={busy || camera.status !== 'ready'} onClick={() => void submit(camera.capture)}>
+            <button type="button" className="camera-shutter" aria-label={copy.title} disabled={busy || camera.status !== 'ready'} onClick={() => void submit(() => camera.capture(maxSide))}>
               <img src={asset('shutter.svg')} alt="" width={80} height={80} />
             </button>
             <span className="camera-actions-spacer" />

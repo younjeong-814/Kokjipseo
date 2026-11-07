@@ -30,6 +30,8 @@ import { useRecognition } from './features/recognition/useRecognition';
 import { IngredientDetailPage } from './features/ingredients/IngredientDetailPage';
 import { recognizeReceipt } from './features/receipt/ocr';
 import { recognizeIngredients } from './features/recognition/recognize';
+import { RecognitionError } from './features/recognition/RecognitionError';
+import { RecognitionFailedPage } from './features/recognition/RecognitionFailedPage';
 import { defaultStorage } from './features/ingredients/expiry';
 import { toDateKey } from './lib/date';
 import { StoredIngredientsPage } from './features/ingredients/StoredIngredientsPage';
@@ -71,6 +73,9 @@ export function App() {
   const [detailOrigin, setDetailOrigin] = useState<'home' | 'fridge' | 'fridge-registered' | 'fridge-food' | 'fridge-search'>('fridge-registered');
   const [editingFromDetail, setEditingFromDetail] = useState(false);
   const [recognitionError, setRecognitionError] = useState('');
+  const [recognitionFailure, setRecognitionFailure] = useState<RecognitionError | null>(null);
+  // 인식 실패 화면에서 직접 입력으로 왔으면 뒤로 가기는 실패 화면으로 돌아간다.
+  const [manualFromFailure, setManualFromFailure] = useState(false);
   // 레시피 화면에서 고른 재료. 추천 결과 화면과 '다른 임박 재료 선택'으로 돌아올 때 유지한다.
   const [openedRecipe, setOpenedRecipe] = useState<Recipe | null>(null);
   const [recipeSelection, setRecipeSelection] = useState<string[] | undefined>();
@@ -104,6 +109,7 @@ export function App() {
   };
   const navigate = (destination: ScreenId) => {
     if (destination !== 'manual-entry') setEditingIngredient(undefined);
+    else setManualFromFailure(screen === 'recognition-failed');
     if (destination === 'fridge-search' && (screen === 'fridge' || screen === 'fridge-food' || screen === 'fridge-registered')) setSearchOrigin(screen);
     // 냉장고 탭에서 새로 열 때만 비운다. 상세에서 돌아올 때는 직전 검색을 그대로 보여 준다.
     if (destination === 'fridge-search' && screen !== 'ingredient-detail') { setSearchQuery({ type: 'idle' }); setSearchText(''); }
@@ -122,12 +128,20 @@ export function App() {
   useEffect(() => { if ((screen === 'recipe-no-result' || screen === 'recipe-results') && !hasRecipeSelection) window.location.replace('#recipe'); }, [screen, hasRecipeSelection]);
   const info = screens[displayScreen];
   // 영수증 촬영은 OCR, 냉장고 칸·상품 촬영은 Gemini 식재료 인식을 거친다.
-  // 인식에 실패하면 오류를 던져 카메라 화면에 안내하고, 결과 화면으로 넘어가지 않는다.
+  // 인식 단계 실패(결과 없음·서버 오류·한도 초과)는 인식 실패 화면으로 보낸다.
+  // 로그인·촬영 문제는 오류를 그대로 던져 카메라 화면에 안내한다.
   const onCapture = async (image: string) => {
     registering.current = false;
     setRecognitionError('');
-    if (captureGuide === 'guide-receipt') recognition.showReceipt(await recognizeReceipt(image));
-    else recognition.showDetected(await recognizeIngredients(image, captureGuide === 'guide-product' ? 'product' : 'fridge'));
+    try {
+      if (captureGuide === 'guide-receipt') recognition.showReceipt(await recognizeReceipt(image));
+      else recognition.showDetected(await recognizeIngredients(image, captureGuide === 'guide-product' ? 'product' : 'fridge'));
+    } catch (failure) {
+      if (!(failure instanceof RecognitionError)) throw failure;
+      setRecognitionFailure(failure);
+      navigate('recognition-failed');
+      return;
+    }
     navigate('recognition-result');
   };
   const openDetail = (item: Ingredient) => { window.location.hash = `ingredient-detail?item=${encodeURIComponent(item.id)}`; };
@@ -178,13 +192,18 @@ export function App() {
     return <div className="app-shell"><RecipeNoUrgentPage onBack={() => navigate('home')} onOpenFridge={() => navigate('fridge')} /></div>;
   }
   if (screen === 'manual-entry') {
-    return <div className="app-shell"><ManualEntryPage key={editingIngredient?.id ?? 'new'} navigate={navigate} initial={editingIngredient} onCancel={editingFromDetail && editingIngredient ? () => openDetail(editingIngredient) : undefined} onSave={(draft, id) => {
+    return <div className="app-shell"><ManualEntryPage key={editingIngredient?.id ?? 'new'} navigate={navigate} initial={editingIngredient} onCancel={editingFromDetail && editingIngredient ? () => openDetail(editingIngredient) : manualFromFailure && !editingIngredient ? () => window.history.back() : undefined} onSave={(draft, id) => {
       ingredients.save(draft, id);
       const noun = isFood(draft) ? '음식' : '식재료';
       setRegistrationMessage(id ? `${noun}${noun === '음식' ? '을' : '를'} 수정했어요` : `${noun} 1개를 등록했어요`);
       if (id && editingFromDetail && editingIngredient) openDetail(editingIngredient);
       else navigate(isFood(draft) ? 'fridge-food' : 'fridge-registered');
     }} /></div>;
+  }
+  if (screen === 'recognition-failed') {
+    // 새로고침 등으로 실패 정보가 없으면 촬영 방식을 다시 고르게 한다.
+    if (!recognitionFailure) return <div className="app-shell screen-receipt"><main className="ingredient-not-found"><p>촬영 방식을 다시 선택해 주세요.</p><button onClick={() => navigate('registration')}>식재료 등록으로 가기</button></main></div>;
+    return <div className="app-shell screen-receipt"><RecognitionFailedPage kind={recognitionFailure.kind} source={recognitionFailure.source} message={recognitionFailure.message} onBack={() => window.history.back()} onRetake={() => navigate('camera')} onManual={() => navigate('manual-entry')} /></div>;
   }
   if (screen === 'guide-fridge' || screen === 'guide-product' || screen === 'guide-receipt' || screen === 'camera' || screen === 'recognition-result') {
     return (
