@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { SubHeader } from '../../components/SubHeader';
 import { asset } from '../../lib/assets';
 import type { Navigate, ScreenId } from '../../prototype/flow';
@@ -25,16 +25,6 @@ export function ReceiptCameraPage({ navigate, onCapture, backDestination = 'guid
   const albumInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const noticeTimer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
-  const toggleFlash = async () => {
-    if (await camera.toggleTorch()) return;
-    // iOS 사파리·PC 브라우저는 웹에서 플래시를 켤 수 없다.
-    setNotice('이 기기에서는 플래시를 켤 수 없어요.\n밝은 곳에서 촬영해 주세요.');
-    window.clearTimeout(noticeTimer.current);
-    noticeTimer.current = window.setTimeout(() => setNotice(''), 2500);
-  };
   const submit = async (getImage: () => Promise<string | null> | string | null) => {
     if (busy) return;
     setBusy(true);
@@ -49,16 +39,13 @@ export function ReceiptCameraPage({ navigate, onCapture, backDestination = 'guid
   };
   const copy = copies[backDestination as keyof typeof copies] ?? copies['guide-receipt'];
   const maxSide = backDestination === 'guide-product' ? MAX_SIDE.product : backDestination === 'guide-fridge' ? MAX_SIDE.fridge : MAX_SIDE.receipt;
-  const message = busy ? copy.busy : error || notice || (camera.status === 'ready' ? '' : statusMessages[camera.status]);
+  const message = busy ? copy.busy : error || (camera.status === 'ready' ? '' : statusMessages[camera.status]);
   return (
     <main className="receipt-camera" data-figma-node="5579:702">
       <SubHeader title={copy.title} onBack={() => navigate(backDestination)} />
       <section className="camera-view" aria-label="카메라 미리보기">
         <div className="camera-guide-bar">
           <p>{copy.guide}</p>
-          <button type="button" className="camera-flash" aria-label={camera.torch.on ? '플래시 켜짐' : '플래시 꺼짐'} aria-pressed={camera.torch.on} disabled={busy || camera.status !== 'ready'} onClick={() => void toggleFlash()}>
-            <img src={asset(camera.torch.on ? 'flash-on.svg' : 'flash-off.svg')} alt="" width={24} height={24} />
-          </button>
         </div>
         <div className="camera-preview" aria-busy={busy}>
           <video ref={camera.videoRef} className="camera-video" playsInline muted hidden={camera.status !== 'ready'} />
