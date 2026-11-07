@@ -1,7 +1,7 @@
 # 마이페이지 대시보드 데이터 연결
 
 - 작업 브랜치: feature/yunjeong_mypage-dashboard_v1
-- 디자인: Figma 3061:12938. 신규 사용자 화면(3061:13127)은 유지한다.
+- 디자인: Figma 3061:12938. 주간·월간·연간 모두 데이터가 없으면 빈 값의 대시보드를 보여준다(신규 사용자 화면 3061:13127은 쓰지 않는다).
 - 실제 화면: /#mypage. App에서 식재료(음식 제외) 개수를 registeredCount로 전달한다. 0개이면 기존 빈 화면, 1개 이상이면 대시보드를 표시한다.
 - 디자인 확인: /#mypage?preview=1. Figma의 82점/78%/소비 12→18/폐기 5→2 등 예시를 사용한다. 사용자 통계나 localStorage에 저장하지 않는다.
 - `MyPage`의 `reports?: MyPageReports`에 실제 집계 응답을 전달하면 주간/월간/전체 탭에 대응하는 값으로 표시한다. 계약은 src/features/mypage/report.ts 참고. React 상태/쿼리 훅에서 받은 reports를 전달하면 갱신된다.

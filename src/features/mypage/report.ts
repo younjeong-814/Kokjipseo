@@ -4,7 +4,7 @@ export type MyPageReport = {
   scoreLabel: string;
   score: number | null;
   grade: string;
-  // 직전 기간 점수가 없으면 null이며 표시하지 않는다.
+  // 점수 아래 안내 문구. 점수 계산 전·실패 시에도 갱신 시각 안내를 기본으로 보여 준다.
   scoreChange: string | null;
   // 이전 기간과 비교할 기록이 없으면 null이며 피드백 카드를 숨긴다.
   feedbackTitle: string | null;
@@ -24,7 +24,7 @@ export type MyPageReports = Record<ReportPeriod, MyPageReport>;
 
 export function pendingReports(registeredCount: number): MyPageReports {
   return Object.fromEntries((['주간','월간','연간'] as const).map(period => [period, {
-    completedItemCount: 0, scoreLabel: period === '주간' ? '이번 주 냉장고 관리 점수' : period === '월간' ? '이번 달 냉장고 관리 점수' : '올해 냉장고 관리 점수', score: null, grade: '관리 기록을 모으고 있어요', scoreChange: null,
+    completedItemCount: 0, scoreLabel: period === '주간' ? '이번 주 냉장고 관리 점수' : period === '월간' ? '이번 달 냉장고 관리 점수' : '올해 냉장고 관리 점수', score: null, grade: '관리 기록을 모으고 있어요', scoreChange: '점수는 매일 오전 6시에 업데이트돼요',
     feedbackTitle: null, feedbackDescription: null,
     previousLabel: period === '주간' ? '지난주' : period === '월간' ? '지난달' : '지난해', currentLabel: period === '주간' ? '이번 주' : period === '월간' ? '이번 달' : '올해',
     consumed: { previous: null, current: null }, discarded: { previous: null, current: null },
