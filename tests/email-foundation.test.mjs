@@ -91,7 +91,7 @@ before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.uid() to anon,authenticated,service_role;`);
- for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+ for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql','202611070001_capture_budget_20.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
 });
 after(()=>db.close());

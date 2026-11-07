@@ -29,8 +29,16 @@ const RULES = [
 const RETRY_STATUS = [429, 503];
 const RETRY_DELAY = 1500;
 
+// 식재료 목록 추출에는 긴 추론이 필요 없어 생각(thinking)을 최소로 줄인다. Edge의 photo.ts와 같은 규칙이다.
+export function thinkingConfig(model: string): Record<string, unknown> | undefined {
+  if (/^gemini-2\.5-flash/.test(model)) return { thinkingBudget: 0 };
+  if (/^gemini-([3-9]|\d{2})/.test(model)) return { thinkingLevel: model.includes('flash') ? 'minimal' : 'low' };
+  return undefined;
+}
+
 export async function recognizeIngredients(apiKey: string, image: string, mode: RecognizeMode, model = DEFAULT_GEMINI_MODEL): Promise<string[]> {
-  const request = () => fetch(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
+  const thinking = thinkingConfig(model);
+  const request = (withThinking = true) => fetch(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
@@ -39,15 +47,20 @@ export async function recognizeIngredients(apiKey: string, image: string, mode: 
         temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT', properties: { items: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['items'] },
+        ...(withThinking && thinking ? { thinkingConfig: thinking } : {}),
       },
     }),
   });
+  const started = Date.now();
   let response = await request();
+  // 모델이 생각 설정을 지원하지 않으면(400) 설정 없이 한 번 더 요청한다.
+  if (response.status === 400 && thinking) response = await request(false);
   if (RETRY_STATUS.includes(response.status)) {
     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     response = await request();
   }
   const data = await response.json() as GeminiResponse;
+  console.log(`[gemini-recognize] ${model} ${response.status} ${Date.now() - started}ms`);
   if (!response.ok || data.error) throw new Error(data.error?.message ?? `Gemini API ${response.status}`);
   const text = data.candidates?.[0]?.content?.parts?.map(part => part.text ?? '').join('') ?? '';
   const items = (JSON.parse(text || '{}') as { items?: unknown }).items;

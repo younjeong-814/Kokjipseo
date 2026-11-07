@@ -18,14 +18,22 @@ export function securedHandler(env:Env,kind:'recipes'|'ocr'|'recognize',method:'
     if(!env.SUPABASE_URL||!(env.SUPABASE_ANON_KEY||env.SUPABASE_PUBLISHABLE_KEY))return send(503,{error:'서버 인증 설정을 확인해 주세요.'});
     const authHeaders={Authorization:auth,apikey:(env.SUPABASE_PUBLISHABLE_KEY||env.SUPABASE_ANON_KEY)!};
     try{
-      const user=await fetcher(`${env.SUPABASE_URL}/auth/v1/user`,{headers:authHeaders,signal:AbortSignal.timeout(10000)});
+      const started=Date.now();
+      // 사용자 확인과 한도 차감을 동시에 보낸다. RPC는 같은 JWT로 auth.uid()를 직접 검증하므로
+      // 잘못된 토큰은 차감되지 않고, 외부 API는 두 결과를 모두 확인한 뒤에만 호출한다.
+      const [user,quota]=await Promise.all([
+        fetcher(`${env.SUPABASE_URL}/auth/v1/user`,{headers:authHeaders,signal:AbortSignal.timeout(10000)}),
+        // A fixed database-enforced per-user budget prevents client-side resets.
+        fetcher(`${env.SUPABASE_URL}/rest/v1/rpc/consume_api_budget`,{method:'POST',headers:{...authHeaders,'Content-Type':'application/json'},body:JSON.stringify({api_kind:kind}),signal:AbortSignal.timeout(10000)}),
+      ]);
       if(!user.ok)return send(401,{error:'로그인이 만료됐어요. 다시 로그인해 주세요.'});
       const identity=await user.json();if(!identity?.id)return send(401,{error:'로그인 정보를 확인하지 못했어요.'});
-      // A fixed database-enforced per-user budget prevents client-side resets.
-      const quota=await fetcher(`${env.SUPABASE_URL}/rest/v1/rpc/consume_api_budget`,{method:'POST',headers:{...authHeaders,'Content-Type':'application/json'},body:JSON.stringify({api_kind:kind}),signal:AbortSignal.timeout(10000)});
       if(!quota.ok)return send(503,{error:'서버 호출 제한 설정을 확인해 주세요.'});
       if(await quota.json()!==true)return send(429,{error:'오늘의 테스트 이용 횟수에 도달했어요. 내일 다시 이용해 주세요.'});
-      return send(200,await action(request));
+      const checked=Date.now();
+      // 구간별 소요 시간만 남긴다. 키·이미지·사용자 정보는 기록하지 않는다.
+      try{return send(200,await action(request));}
+      finally{console.log(JSON.stringify({fn:kind,authBudgetMs:checked-started,actionMs:Date.now()-checked}));}
     }catch(error){
       if(error instanceof HttpError)return send(error.status,{error:error.message});
       // Never echo provider errors/URLs: some upstream APIs put credentials in URLs.

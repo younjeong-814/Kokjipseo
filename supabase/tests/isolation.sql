@@ -25,7 +25,7 @@ do $$ begin
   exception when others then if sqlerrm <> 'invalid_revision' then raise; end if; end;
   if jsonb_array_length(public.load_fridge_snapshot()->'ingredients')<>1 then raise exception 'failed write changed data'; end if;
   if not public.consume_api_budget('recognize') then raise exception 'first budget failed'; end if;
-  perform public.consume_api_budget('recognize');perform public.consume_api_budget('recognize');perform public.consume_api_budget('recognize');perform public.consume_api_budget('recognize');
+  perform public.consume_api_budget('recognize') from generate_series(2,20);
   if public.consume_api_budget('recognize') then raise exception 'budget bypass'; end if;
   begin perform count(*) from public.api_usage;raise exception 'usage table exposed';exception when insufficient_privilege then null;end;
 end $$;

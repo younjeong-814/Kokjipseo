@@ -159,3 +159,10 @@ test('reminder HTML and text carry the email return marker',()=>{
  assert.ok(mail.html.includes('#fridge?source=email'));
  assert.ok(mail.text.includes('#fridge?source=email'));
 });
+test('Gemini photo request lowers thinking by model and retries without it when unsupported',async()=>{
+ const {thinkingConfig}=load('../supabase/functions/_shared/photo.ts');
+ assert.deepEqual(thinkingConfig('gemini-2.5-flash'),{thinkingBudget:0});assert.deepEqual(thinkingConfig('gemini-3.6-flash'),{thinkingLevel:'minimal'});assert.deepEqual(thinkingConfig('gemini-3-pro'),{thinkingLevel:'low'});assert.equal(thinkingConfig('gemini-2.0-flash'),undefined);
+ const bodies=[];const ok=()=>Response.json({candidates:[{content:{parts:[{text:JSON.stringify({items:[]})}]}}]});
+ await recognizePhoto('K','gemini-3.6-flash','/9j/AAAA','product',async(url,init)=>{bodies.push(JSON.parse(init.body).generationConfig);return bodies.length===1?new Response('',{status:400}):ok()});
+ assert.equal(bodies.length,2);assert.deepEqual(bodies[0].thinkingConfig,{thinkingLevel:'minimal'});assert.equal(bodies[1].thinkingConfig,undefined);
+});

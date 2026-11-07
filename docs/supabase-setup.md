@@ -64,6 +64,7 @@ Edge 함수 배포는 완료했다. Google OAuth와 실제 키 설정 전에는 
 - `202610240002_cloud_snapshot.sql`: 저장 레시피·버전 테이블과 원자적 snapshot RPC.
 - `202610240003_api_budget.sql`: 외부 호출용 사용자별 일일 제한.
 - `202610240004_revision_validation.sql`: 누락·음수 버전으로 충돌 검사를 우회하지 못하도록 검증.
+- `202611070001_capture_budget_20.sql`: 영수증 OCR(10회→20회)·사진 인식(5회→20회) 일일 한도 상향.
 - `supabase/tests/isolation.sql`: 가상 계정 두 개로 소유자 분리·충돌·익명 차단·쿼터 확인 후 전부 롤백.
 
 `save_fridge_snapshot`은 버전이 일치할 때만 자기 데이터에 CRUD를 반영한다.
@@ -123,7 +124,7 @@ supabase functions deploy recognize
 `config.toml`의 게이트웨이 JWT 검사는 publishable key 호환을 위해 false지만,
 각 함수가 Auth `/user`로 사용자 JWT를 확인한 후에만 외부 요청을 실행한다.
 인증·쿼터 확인 코드 없이 함수를 공개하지 않는다. CORS는 정확한 배포 Origin만 허용한다.
-DB의 `consume_api_budget`이 한국 날짜별로 사용자당 recipes 50회, OCR 10회, 사진 인식 5회를 제한한다.
+DB의 `consume_api_budget`이 한국 날짜별로 사용자당 recipes 50회, OCR 20회, 사진 인식 20회를 제한한다(202611070001에서 OCR 10회→20회, 사진 인식 5회→20회).
 이 수치는 비용 절감을 위한 테스트 제한이며 공급자의 무료 사용량 보장은 아니다.
 실패·재시도도 제한을 사용할 수 있다. 프로젝트 전체 AI 한도는 공급자에서 따로 확인한다.
 
