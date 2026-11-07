@@ -76,6 +76,9 @@ export function isExcludedItem(name: string): boolean {
 /** 사전 전체(키워드·카테고리). 레시피 검색 점검 스크립트(scripts/audit-recipe-search.mjs)도 쓴다. */
 export const entries = Object.entries(dictionary).flatMap(([category, keywords]) => keywords.map(keyword => ({ category, keyword })));
 
+// '액'이 붙으면 조미료가 되는 원재료 카테고리.
+const EXTRACT_SOURCES = ['수산물', '육류', '채소', '과일'];
+
 /** 이름에서 규칙상 이기는 키워드와 그 카테고리. 소비권장일 DB를 찾을 때도 이 키워드를 쓴다. */
 export function matchIngredient(name: string): { keyword: string; category: string } | undefined {
   const text = name.toLowerCase();
@@ -85,6 +88,11 @@ export function matchIngredient(name: string): { keyword: string; category: stri
       const end = start + keyword.length;
       if (keyword.length === 1 && end < text.length && text[end] !== ' ') continue;
       if (!best || end > best.end || (end === best.end && keyword.length > best.length)) best = { end, length: keyword.length, keyword, category };
+      // 원재료 뒤에 '액'이 붙으면 그 원재료로 만든 조미료다. 참치액·멸치액 → 조미료·소스. 액젓은 사전 키워드가 따로 이긴다.
+      if (EXTRACT_SOURCES.includes(category) && text[end] === '액' && (end + 1 === text.length || text[end + 1] === ' ')) {
+        const extract = { end: end + 1, length: keyword.length + 1, keyword: keyword + '액', category: '조미료·소스' };
+        if (!best || extract.end > best.end || (extract.end === best.end && extract.length > best.length)) best = extract;
+      }
     }
   }
   return best && { keyword: best.keyword, category: best.category };

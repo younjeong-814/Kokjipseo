@@ -51,6 +51,7 @@ const cases = [
   // 규칙 3: 끝 위치가 같으면 긴 키워드
   ['아이스크림', '기타 음식'], ['고춧가루', '조미료·소스'], ['김치찌개', '국·찌개'], ['된장국', '국·찌개'], ['갈비탕', '국·찌개'], ['김밥', '기타 음식'], ['볶음밥', '가공식품'],
   // 규칙 4: 한 글자 키워드는 단어 끝에서만
+  ['참치액', '조미료·소스'], ['한라 참치액', '조미료·소스'], ['멸치액', '조미료·소스'], ['멸치액젓', '조미료·소스'], ['참치', '수산물'],
   ['파프리카', '채소'], ['배추', '채소'], ['감자', '채소'], ['단무지', '반찬'], ['굴소스', '조미료·소스'], ['젓갈', '반찬'], ['게맛살', '가공식품'],
   // 규칙 5: 모르면 기타 음식
   ['키친타월', '기타 음식'], ['', '기타 음식'], ['잡채', '기타 음식'],
@@ -119,6 +120,16 @@ test('food without its own DB row uses the category record', () => {
   assert.equal(at('우리집 된장찌개', '국·찌개'), '2026-10-15');
   assert.equal(at('두부', '두부·콩류'), expiry.calculateRecommendedDate('두부', '냉장', '2026-10-13')); // 이름으로 찾으면 그대로
   assert.equal(at('처음보는음식', '기타 음식'), '');                 // 기준 행이 없는 카테고리는 비워 둔다
+});
+
+test('seasonings get a date only from a 조미료 DB row', () => {
+  const at = (name, category, storage = '냉장') => expiry.resolveExpiry({ name, category, storage, date: '', storageStartedOn: '2026-10-13' }).date;
+  assert.equal(at('참치액', '조미료·소스'), '');     // 참치(수산물 냉장 1일) 행을 쓰지 않는다
+  assert.equal(at('참치액', '수산물'), '');          // 사진 인식이 수산물로 줘도 참치 행에 걸리지 않는다
+  assert.equal(at('쌈장', '조미료·소스'), '');
+  assert.equal(at('샘표 진간장', '조미료·소스'), expiry.calculateRecommendedDate('간장', '냉장', '2026-10-13'));
+  assert.notEqual(at('고추장', '조미료·소스'), '');
+  assert.notEqual(at('참치', '수산물'), '');
 });
 
 test('default storage: single record, then 냉장 → 실온 → 냉동, skipping 비권장 rows', () => {
