@@ -73,3 +73,4 @@ if(gmail){
   if(!transport){console.error('.env.local에 RESEND_API_KEY와 EMAIL_FROM을 넣어 주세요.');process.exit(1);}
   await transport({kind:'reminder-digest',to,ingredients:digestIngredients.map((item,index)=>({...item,ingredientId:String(index),deliveryId:String(index)}))},`manual-test-digest:${Date.now()}`);
   console.log(`보냄: 식재료 ${digestIngredients.length}개 · 1통`);
+}
