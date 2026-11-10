@@ -44,6 +44,7 @@ export function UTConsentSheet({userId}:{userId:string}){
         <p>콕집서에 내 냉장고 속 식재료를 등록하고, 소비 권장일 알림을 받아보는 테스트예요.</p>
       </section>
       <p className="ut-consent-note">소비 권장일이 다가오면 메일로 알려드려요.</p> 
+      <a className="ut-consent-form-link" href="https://docs.google.com/forms/d/e/1FAIpQLSdnLd4D7twDKh2W2oBpA3ijZMqbRF15ZLgkVff4MDEII-r1MQ/viewform" target="_blank" rel="noreferrer">1차 테스트 참여하기</a>
       {error&&<p className="ut-consent-error" role="alert">{error}</p>}
       <footer className="ut-consent-actions">
         <ActionButton disabled={busy} onClick={()=>void accept()}>{busy?'저장 중이에요':'테스트 시작하기'}</ActionButton>
