@@ -32,6 +32,14 @@
 .ut-survey-footer .ut-survey-cta { display: flex; align-items: center; justify-content: center; height: 56px; min-height: 56px; padding: 0 20px; border-radius: 16px; color: var(--gray-0); font-size: 18px; line-height: 24px; text-align: center; text-decoration: none; white-space: nowrap; }
 .ut-survey-footer .ut-survey-cta:focus-visible,.ut-survey-header > button:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 2px; }
 .ut-survey-footer > p { margin: 12px 0 0; color: var(--gray-700); font-size: 12px; line-height: 17px; text-align: center; }
+.ut-second-survey.recognition-overlay { height: auto; }
+.ut-second-survey::backdrop { background: rgb(0 0 0 / 40%); }
+.ut-second-survey .ut-survey-content { padding-bottom: 16px; }
+.ut-second-survey .ut-survey-header { position: relative; }
+.ut-second-survey .ut-survey-header > div { padding-right: 4px; }
+.ut-second-survey .ut-survey-header > div > p { padding-right: 24px; }
+.ut-second-survey .ut-survey-header > button { position: absolute; top: 0; right: 0; }
+.ut-second-survey .ut-survey-header h2 { letter-spacing: -0.2px; }
 @media (max-height: 480px) {
   .ut-consent-sheet.recognition-overlay { height: auto; min-height: 0; }
   .ut-survey-footer { margin-top: 0; }

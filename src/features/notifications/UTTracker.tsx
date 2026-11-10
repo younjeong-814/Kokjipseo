@@ -2,6 +2,7 @@ import {useEffect} from 'react';
 import {supabase} from '../cloud/client';
 import {UTConsentSheet} from './UTConsentSheet';
 import {UTWelcomeSheet} from './UTWelcomeSheet';
+import {UTSecondSurvey} from './UTSecondSurvey';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenName=/^[a-z0-9-]{1,40}$/;
 const SOURCE_KEY='kokjipseo:entry-source';
@@ -56,5 +57,5 @@ export function UTTracker({userId,initialIngredientCount}:{userId:string;initial
     report();window.addEventListener('hashchange',report);window.addEventListener('kokjipseo:notification-preferences-changed',report);
     return()=>{window.removeEventListener('hashchange',report);window.removeEventListener('kokjipseo:notification-preferences-changed',report);};
   },[userId]);
-  return <><UTWelcomeSheet key={`welcome:${userId}`} userId={userId}/><UTConsentSheet key={`survey:${userId}`} userId={userId} initialIngredientCount={initialIngredientCount}/></>;
+  return <><UTWelcomeSheet key={`welcome:${userId}`} userId={userId}/><UTConsentSheet key={`survey:${userId}`} userId={userId} initialIngredientCount={initialIngredientCount}/><UTSecondSurvey key={userId} userId={userId}/></>;
 }

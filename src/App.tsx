@@ -3,6 +3,7 @@ import { useAppStorage } from './features/cloud/StorageContext';
 import { useSavedRecipes } from './features/cloud/SavedRecipes';
 import { BottomNavigation } from './components/BottomNavigation';
 import { Snackbar } from './components/Snackbar';
+import { notifyIngredientStatusUpdated } from './features/notifications/UTSecondSurvey';
 
 import { TopHeader } from './components/TopHeader';
 import { HomePage } from './features/home/HomePage';
@@ -191,10 +192,16 @@ export function App() {
     const item = ingredients.items.find(value => value.id === detailId);
     return <div className="app-shell">{item ? <IngredientDetailPage key={item.id} item={item} onBack={() => navigate(detailOrigin)} onEdit={patch => ingredients.updateInfo(item.id, patch)} onSave={patch => {
       ingredients.updateDetails(item.id, patch);
+      if (!isFood(item) && (patch.storage !== item.storage || patch.date !== item.date || patch.remainingPercent !== (item.remainingPercent ?? 100))) {
+        notifyIngredientStatusUpdated();
+      }
       const destination = isFood(item) ? 'fridge-food' : 'fridge-registered';
       setDetailSavedDestination(destination);
       navigate(destination);
-    }} onCondition={status => ingredients.recordCondition(item.id, status)} onDiscard={() => { ingredients.remove(item.id); navigate(detailOrigin); }} onConsume={() => { ingredients.consume(item.id); navigate(detailOrigin); }} /> : <main className="ingredient-not-found"><p role="alert">{ingredients.error || '식재료를 찾을 수 없어요. 삭제된 항목인지 확인해 주세요.'}</p><button onClick={() => navigate('fridge')}>냉장고로 돌아가기</button></main>}</div>;
+    }} onCondition={status => {
+      ingredients.recordCondition(item.id, status);
+      if (!isFood(item)) notifyIngredientStatusUpdated();
+    }} onDiscard={() => { ingredients.remove(item.id); navigate(detailOrigin); }} onConsume={() => { ingredients.consume(item.id); navigate(detailOrigin); }} /> : <main className="ingredient-not-found"><p role="alert">{ingredients.error || '식재료를 찾을 수 없어요. 삭제된 항목인지 확인해 주세요.'}</p><button onClick={() => navigate('fridge')}>냉장고로 돌아가기</button></main>}</div>;
   }
   if (screen === 'recipe-no-result') {
     // 재료 선택 화면과 같은 순서(임박순)로 보여준다.
