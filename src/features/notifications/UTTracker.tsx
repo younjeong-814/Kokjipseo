@@ -1,6 +1,7 @@
 import {useEffect} from 'react';
 import {supabase} from '../cloud/client';
 import {UTConsentSheet} from './UTConsentSheet';
+import {UTWelcomeSheet} from './UTWelcomeSheet';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenName=/^[a-z0-9-]{1,40}$/;
 const SOURCE_KEY='kokjipseo:entry-source';
@@ -13,7 +14,7 @@ type UTEventType='app_open'|'notification_click'|'ingredient_view'|'ingredient_m
 export function entrySource():'pickply'|'email'|null{
   const search=new URLSearchParams(window.location.search).get('src');
   const hash=new URLSearchParams(window.location.hash.split('?')[1]??'').get('source');
-  const found=search==='pickply'?'pickply':hash==='email'?'email':null;
+  const found=hash==='email'?'email':search==='pickply'?'pickply':null;
   try{
     if(found)sessionStorage.setItem(SOURCE_KEY,found);
     const saved=sessionStorage.getItem(SOURCE_KEY);
@@ -55,5 +56,5 @@ export function UTTracker({userId,initialIngredientCount}:{userId:string;initial
     report();window.addEventListener('hashchange',report);window.addEventListener('kokjipseo:notification-preferences-changed',report);
     return()=>{window.removeEventListener('hashchange',report);window.removeEventListener('kokjipseo:notification-preferences-changed',report);};
   },[userId]);
-  return <UTConsentSheet userId={userId} initialIngredientCount={initialIngredientCount}/>;
+  return <><UTWelcomeSheet key={`welcome:${userId}`} userId={userId}/><UTConsentSheet key={`survey:${userId}`} userId={userId} initialIngredientCount={initialIngredientCount}/></>;
 }

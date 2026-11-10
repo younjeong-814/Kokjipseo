@@ -36,3 +36,14 @@
   .ut-consent-sheet.recognition-overlay { height: auto; min-height: 0; }
   .ut-survey-footer { margin-top: 0; }
 }
+.ut-welcome-sheet.recognition-overlay.bottom-sheet { height:auto; max-height:90dvh; padding:0; overflow-y:auto; border-radius:24px 24px 0 0; }
+.ut-welcome-layout { display:flex; flex-direction:column; gap:20px; padding:28px 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.ut-welcome-layout p,.ut-welcome-layout h2 { margin:0; }
+.ut-welcome-eyebrow { color:var(--blue-500); font-size:14px; line-height:19px; margin-bottom:8px!important; }
+.ut-welcome-layout h2 { font-size:22px; line-height:30px; }
+.ut-welcome-mission { padding:16px; border:1px solid var(--blue-100); border-radius:12px; background:var(--blue-50); }
+.ut-welcome-mission strong { display:block; margin-bottom:4px; font-size:15px; line-height:21px; }
+.ut-welcome-mission p,.ut-welcome-note { font-size:14px; line-height:21px; }
+.ut-welcome-consent { color:var(--gray-700); font-size:12px; line-height:18px; }
+.ut-welcome-error { color:var(--red-500,#cf3e52); font-size:13px; line-height:19px; }
+.ut-welcome-layout .action-button { width:100%; min-height:56px; border-radius:16px; font-size:18px; }

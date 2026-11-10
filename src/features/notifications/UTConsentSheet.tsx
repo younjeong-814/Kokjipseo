@@ -16,7 +16,7 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
     const firstVisitKey=`kokjipseo:ut-survey-first-visit:${userId}`;
     const pendingKey=`kokjipseo:ut-survey-pending:${userId}`;
     const shownKey=`kokjipseo:ut-survey-shown:${userId}`;
-    let live=true;
+    let live=true,shown=false;
     try{
       // 첫 앱 방문에 냉장고가 비어 있으면 첫 식재료 등록까지 설문 표시를 대기한다.
       if(localStorage.getItem(firstVisitKey)!=='1'){
@@ -24,21 +24,18 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
         if(initialIngredientCount===0)localStorage.setItem(pendingKey,'1');
       }
     }catch{/* 저장소를 사용할 수 없으면 현재 방문에서만 처리한다. */}
-    const showAfterFirstRegistration=async()=>{
-      if(!live||entrySource()==='email')return;
+    const showAfterFirstRegistration=()=>{
+      if(!live||shown||entrySource()==='email')return;
       let eligible=false;
       try{eligible=localStorage.getItem(pendingKey)==='1';}catch{eligible=initialIngredientCount===0;}
       if(!eligible)return;
       try{if(localStorage.getItem(shownKey)==='1')return;}catch{/* 계속 진행 */}
-      try{
-        const result=await supabase!.from('ut_participants').select('status').eq('user_id',userId).maybeSingle();
-        // 조회 실패 시에는 띄우지 않는다. 참여 여부를 확인하지 못한 채 설문을 묻지 않는다.
-        if(!live||result.error)return;
-        try{localStorage.removeItem(pendingKey);}catch{/* 표시 상태는 아래 로컬 상태로 유지 */}
-        if(result.data)return;
-        try{localStorage.setItem(shownKey,'1');}catch{/* 현재 세션 중복만 막는다. */}
-        setOpen(true);
-      }catch{/* 조회 실패 시 표시하지 않는다. */}
+      // Participation consent is handled by UTWelcomeSheet. An active participant
+      // must still receive the survey after their first registration.
+      shown=true;
+      try{localStorage.removeItem(pendingKey);}catch{/* 현재 화면 상태로 유지 */}
+      try{localStorage.setItem(shownKey,'1');}catch{/* 현재 세션 중복만 막는다. */}
+      setOpen(true);
     };
     const registered=()=>void showAfterFirstRegistration();
     window.addEventListener('kokjipseo:first-ingredient-registered',registered);
