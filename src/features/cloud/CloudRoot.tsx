@@ -16,6 +16,8 @@ import { ConnectionStatusIcon } from '../../components/ConnectionStatusIcon';imp
 import {useNotificationSettings} from '../notifications/useNotificationSettings';
 import {preferencesChanged} from '../notifications/client';
 import {UTTracker,recordManagedActivity} from '../notifications/UTTracker';
+import {isFood} from '../ingredients/expiry';
+import type {Ingredient} from '../ingredients/repository';
 
 const previewEmailReturn=import.meta.env.DEV && new URLSearchParams(window.location.hash.split('?')[1]??'').get('preview')==='email-return';
 let reloginWithGoogle=restoreAuthReturn();
@@ -259,7 +261,7 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
       {backupNotice&&<p role="alert">{backupNotice}</p>}
     </div></AccountBar>}>
     {children}
-    <UTTracker userId={session.user.id}/>
+    <UTTracker userId={session.user.id} initialIngredientCount={storage.snapshot().ingredients.filter(item=>!isFood(item as Ingredient)).length}/>
     {error&&<aside className="cloud-save-warning" role="alert">{error}<button onClick={()=>{setBackupNotice('');void backup().catch(backupFailed);}}>기록 백업</button>{backupNotice&&<p>{backupNotice}</p>}</aside>}
     </AccountContext.Provider>
   </StorageContext.Provider>;

@@ -8,19 +8,43 @@ import closeIcon from '../../assets/ut-survey/icon-close.svg';
 
 const SURVEY_URL='https://docs.google.com/forms/d/e/1FAIpQLSdnLd4D7twDKh2W2oBpA3ijZMqbRF15ZLgkVff4MDEII-r1MQ/viewform';
 
-/** 첫 진입 때 1차 사용성 설문을 안내한다. 표시 조건은 참여 정보가 없는 로그인 사용자로 유지한다. */
-export function UTConsentSheet({userId}:{userId:string}){
+/** 첫 앱 방문에서 냉장고가 비어 있던 사용자가 첫 식재료를 등록하면 1차 사용성 설문을 안내한다. */
+export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;initialIngredientCount:number}){
   const [open,setOpen]=useState(false);
   useEffect(()=>{
-    // 메일로 돌아온 사람은 이미 등록 과정을 거쳤으므로 다시 묻지 않는다.
-    if(!supabase||entrySource()==='email')return;
+    if(!supabase)return;
+    const firstVisitKey=`kokjipseo:ut-survey-first-visit:${userId}`;
+    const pendingKey=`kokjipseo:ut-survey-pending:${userId}`;
+    const shownKey=`kokjipseo:ut-survey-shown:${userId}`;
     let live=true;
-    void(async()=>{
-      const result=await supabase!.from('ut_participants').select('status').eq('user_id',userId).maybeSingle();
-      // 조회 실패 시에는 띄우지 않는다. 동의 여부를 모른 채 묻거나 기록하지 않는다.
-      if(live&&!result.error&&!result.data)setOpen(true);
-    })().catch(()=>{});
-    return()=>{live=false;};
+    try{
+      // 첫 앱 방문에 냉장고가 비어 있으면 첫 식재료 등록까지 설문 표시를 대기한다.
+      if(localStorage.getItem(firstVisitKey)!=='1'){
+        localStorage.setItem(firstVisitKey,'1');
+        if(initialIngredientCount===0)localStorage.setItem(pendingKey,'1');
+      }
+    }catch{/* 저장소를 사용할 수 없으면 현재 방문에서만 처리한다. */}
+    const showAfterFirstRegistration=async()=>{
+      if(!live||entrySource()==='email')return;
+      let eligible=false;
+      try{eligible=localStorage.getItem(pendingKey)==='1';}catch{eligible=initialIngredientCount===0;}
+      if(!eligible)return;
+      try{if(localStorage.getItem(shownKey)==='1')return;}catch{/* 계속 진행 */}
+      try{
+        const result=await supabase!.from('ut_participants').select('status').eq('user_id',userId).maybeSingle();
+        // 조회 실패 시에는 띄우지 않는다. 참여 여부를 확인하지 못한 채 설문을 묻지 않는다.
+        if(!live||result.error)return;
+        try{localStorage.removeItem(pendingKey);}catch{/* 표시 상태는 아래 로컬 상태로 유지 */}
+        if(result.data)return;
+        try{localStorage.setItem(shownKey,'1');}catch{/* 현재 세션 중복만 막는다. */}
+        setOpen(true);
+      }catch{/* 조회 실패 시 표시하지 않는다. */}
+    };
+    const registered=()=>void showAfterFirstRegistration();
+    window.addEventListener('kokjipseo:first-ingredient-registered',registered);
+    // 등록 직후 새로고침된 경우에도 대기 중이던 표시를 이어간다.
+    if(initialIngredientCount>0)void showAfterFirstRegistration();
+    return()=>{live=false;window.removeEventListener('kokjipseo:first-ingredient-registered',registered);};
   },[userId]);
   if(!open)return null;
   return <OverlayDialog label="콕집서 1차 사용성 설문 안내" onClose={()=>setOpen(false)} dismissOutside={false} className="ut-consent-sheet">

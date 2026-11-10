@@ -33,7 +33,7 @@ export async function recordManagedActivity(userId:string,activity:{id:string;it
   await recordUTEvent('ingredient_manage',key,activity.itemId);
 }
 /** Optional UT tracking cannot block or modify fridge CRUD. No collection before DB consent. */
-export function UTTracker({userId}:{userId:string}){
+export function UTTracker({userId,initialIngredientCount}:{userId:string;initialIngredientCount:number}){
   useEffect(()=>{
     if(!appKeys.has(userId))appKeys.set(userId,crypto.randomUUID());
     entrySource();
@@ -55,5 +55,5 @@ export function UTTracker({userId}:{userId:string}){
     report();window.addEventListener('hashchange',report);window.addEventListener('kokjipseo:notification-preferences-changed',report);
     return()=>{window.removeEventListener('hashchange',report);window.removeEventListener('kokjipseo:notification-preferences-changed',report);};
   },[userId]);
-  return <UTConsentSheet userId={userId}/>;
+  return <UTConsentSheet userId={userId} initialIngredientCount={initialIngredientCount}/>;
 }
