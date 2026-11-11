@@ -1,6 +1,6 @@
 export type ReminderEmailIngredient = {name:string;expiryDate:string;daysLeft?:number};
 export type ReminderEmail = {to:string;ingredients:ReminderEmailIngredient[];daysLeft?:number;fridgeUrl?:string;preferencesUrl?:string};
-export const EMAIL_APP_BASE_URL='https://younjeong-814.github.io/kokjipseo/';
+export const EMAIL_APP_BASE_URL='https://younjeong-814.github.io/Kokjipseo/';
 export const EMAIL_APP_LINKS={fridge:`${EMAIL_APP_BASE_URL}#fridge?source=email`,preferences:`${EMAIL_APP_BASE_URL}#settings`} as const;
 export const REMINDER_EMAIL_SUBJECT='[콕집서] 냉장고 속 재료를 확인해 주세요';
 const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));

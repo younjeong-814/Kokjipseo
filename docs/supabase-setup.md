@@ -81,7 +81,7 @@ Edge 함수 배포는 완료했다. Google OAuth와 실제 키 설정 전에는 
 
 앞의 OAuth 항목에 따라 발급·입력한다. Supabase Authentication → URL Configuration:
 
-- Site URL: `https://younjeong-814.github.io/kokjipseo/`
+- Site URL: `https://younjeong-814.github.io/Kokjipseo/`
 - Redirect URLs: 위 주소와 실제 개발용 `http://127.0.0.1:5173/` 등 사용하는 주소만 추가.
 - 클라이언트는 `?code=` PKCE 교환으로 인증하므로 기존 `#home` 등 해시 라우팅을 유지한다.
 - Google OAuth 리디렉션 URI는 **Supabase `/auth/v1/callback`**이다. GitHub Pages URL과 혼동하지 않는다.
@@ -208,7 +208,7 @@ pnpm dlx deno check supabase/functions/recipes/index.ts supabase/functions/ocr/i
 ## Google 로그인 설정 진행 (2026-10-24)
 
 - 대시보드에서 Google 제공자 ENABLED 확인. Client Secret은 읽거나 기록하지 않았다.
-- Site URL: https://younjeong-814.github.io/kokjipseo/
+- Site URL: https://younjeong-814.github.io/Kokjipseo/
 - 허용 Redirect URLs: 위 배포 주소와 http://127.0.0.1:5173/, http://127.0.0.1:5174/, http://127.0.0.1:5175/ (사용자 승인 후 저장, 대시보드 성공 메시지 확인).
 - 로컬 .env.local에 공개 URL/publishable key만 추가했고 기존 비밀 값은 보존했다. .env.local은 Git 제외 확인.
 - 공개 설정 후 빌드와 비밀 값 누출 검사 통과.

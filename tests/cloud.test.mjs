@@ -176,8 +176,8 @@ test('ordinary arrivals still create an anonymous session',async()=>{
 const {renderReminderEmail}=load('../supabase/functions/_shared/emailTemplates.ts');
 test('reminder links use the renamed Pages site and retain email-return routing',()=>{
  const mail=renderReminderEmail({to:'qa@example.com',ingredients:[{name:'두부',expiryDate:'2026-11-14',daysLeft:3}]});
- assert.ok(mail.html.includes('https://younjeong-814.github.io/kokjipseo/#fridge?source=email'));
- assert.ok(mail.html.includes('https://younjeong-814.github.io/kokjipseo/#settings'));
+ assert.ok(mail.html.includes('https://younjeong-814.github.io/Kokjipseo/#fridge?source=email'));
+ assert.ok(mail.html.includes('https://younjeong-814.github.io/Kokjipseo/#settings'));
  assert.ok(!mail.html.includes('/kokjipseotest/'));
 });
 test('reminder HTML and text carry the email return marker',()=>{
