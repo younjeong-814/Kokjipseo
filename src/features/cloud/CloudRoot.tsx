@@ -12,6 +12,7 @@ import { downloadInExternalBrowser, isAndroidInApp } from './externalDownload';
 import { archiveLocalRecords, mergeGuestRecords, stashGuestRecords, takeGuestRecords, takeLocalRecords } from './guestTransfer';
 
 import { AccountContext } from './AccountContext';
+import { FirstUseEligibilityContext } from './FirstUseEligibilityContext';
 import { ConnectionStatusIcon } from '../../components/ConnectionStatusIcon';import { asset } from '../../lib/assets';
 import {useNotificationSettings} from '../notifications/useNotificationSettings';
 import {preferencesChanged} from '../notifications/client';
@@ -140,6 +141,8 @@ function AccountBar({session,data,children}: {session:Session|null;data?:DataMan
   </section>;
 }
 function SignedInStorage({session,children}:{session:Session;children:ReactNode}) {
+  const notificationSettings=useNotificationSettings(session.user.id);
+  const hasUsedAppBefore=Boolean(session.user.identities?.some(identity=>identity.provider==='google') || notificationSettings.settings?.enabled || notificationSettings.settings?.consent_at);
   const [storage,setStorage]=useState<CloudStorage|null>(null);
   useEffect(()=>{
     if(session.user.is_anonymous)return;
@@ -248,6 +251,7 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
   const data={sync,unsaved:error?{count:unsavedCount,onRetry:retrySave}:null,onExport:backup,onImport:importBackup};
   if(isEmailReturn(window.location.hash) && storage.snapshot().ingredients.length===0)return <EmailReturnNotice />;
   return <StorageContext.Provider value={storage}>
+    <FirstUseEligibilityContext.Provider value={{loaded:notificationSettings.loaded || Boolean(notificationSettings.error),hasUsedAppBefore}}>
     <AccountContext.Provider value={<AccountBar session={session} data={data}>
       <div className={`settings-sync-status${error ? ' has-error' : ''}`}>
         {error || !storage.pending ? <ConnectionStatusIcon error={Boolean(error)} /> : null}
@@ -262,6 +266,7 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
     <UTTracker userId={session.user.id}/>
     {error&&<aside className="cloud-save-warning" role="alert">{error}<button onClick={()=>{setBackupNotice('');void backup().catch(backupFailed);}}>기록 백업</button>{backupNotice&&<p>{backupNotice}</p>}</aside>}
     </AccountContext.Provider>
+    </FirstUseEligibilityContext.Provider>
   </StorageContext.Provider>;
 }
 export function CloudRoot({children}:{children:ReactNode}) {
@@ -301,5 +306,5 @@ export function CloudRoot({children}:{children:ReactNode}) {
   if(supabase && !session && !error && isEmailReturn(window.location.hash))return <EmailReturnNotice />;
   if(supabase && !session)return <main className="cloud-account"><p role="alert">{error}</p><button onClick={()=>void initialize()}>다시 시도</button></main>;
   if(session)return <SignedInStorage key={session.user.id} session={session}>{children}</SignedInStorage>;
-  return <StorageContext.Provider key="guest" value={null}><AccountContext.Provider value={<AccountBar session={null}></AccountBar>}>{error&&<p role="alert">{error}</p>}{children}</AccountContext.Provider></StorageContext.Provider>;
+  return <StorageContext.Provider key="guest" value={null}><FirstUseEligibilityContext.Provider value={{loaded:true,hasUsedAppBefore:false}}><AccountContext.Provider value={<AccountBar session={null}></AccountBar>}>{error&&<p role="alert">{error}</p>}{children}</AccountContext.Provider></FirstUseEligibilityContext.Provider></StorageContext.Provider>;
 }

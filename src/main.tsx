@@ -2,6 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { CloudRoot } from './features/cloud/CloudRoot';
+import { useState } from 'react';
+import { SplashScreen } from './features/splash/SplashScreen';
+import './styles/splash.css';
+import './styles/first-use-guide.css';
 import './styles/cloud.css';
 import './styles/email-reminder.css';
 import './styles/ut-consent.css';
@@ -15,7 +19,21 @@ import './styles/recipe.css';
 import './styles/fridge-search.css';
 import './styles/ingredients.css';
 import './styles/ingredient-detail.css';
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><CloudRoot><App /></CloudRoot></React.StrictMode>);
+function EntryPoint() {
+  const [entered, setEntered] = useState(false);
+  const [firstUseGuidePending, setFirstUseGuidePending] = useState(false);
+  if (!entered) return <SplashScreen onEnter={() => {
+    setEntered(true);
+    try { setFirstUseGuidePending(localStorage.getItem('kokjipseo:first-use-guide-seen') !== '1'); }
+    catch { setFirstUseGuidePending(true); }
+  }} />;
+  return <CloudRoot><App firstUseGuidePending={firstUseGuidePending} onFirstUseGuideComplete={() => {
+      try { localStorage.setItem('kokjipseo:first-use-guide-seen', '1'); } catch { /* 세션 내에서는 계속 닫힌 상태로 둔다 */ }
+      setFirstUseGuidePending(false);
+    }} /></CloudRoot>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><EntryPoint /></React.StrictMode>);
 
 import './styles/recipe-results.css';
 import './styles/recipe-detail.css';

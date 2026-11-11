@@ -46,13 +46,17 @@ import { SettingsPage } from './features/mypage/SettingsPage';
 import { WeeklyReportPage } from './features/report/WeeklyReportPage';
 import { buildWeeklyReport, loadHistory } from './features/report/weeklyReport';
 import { FridgeNotifications } from './features/notifications/FridgeNotifications';
+import { FirstUseGuide } from './features/splash/FirstUseGuide';
+import { useFirstUseEligibility } from './features/cloud/FirstUseEligibilityContext';
 import { additionalConnections, isScreenId, screens, type ScreenId } from './prototype/flow';
 function readScreen(): ScreenId {
   const id = window.location.hash.slice(1).split('?')[0];
   return isScreenId(id) ? id : 'home';
 }
 const readDetailId = () => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('item');
-export function App() {
+export function App({ firstUseGuidePending = false, onFirstUseGuideComplete = () => {} }: {
+  firstUseGuidePending?: boolean; onFirstUseGuideComplete?: () => void;
+} = {}) {
   const storage=useAppStorage();
   const savedRecipes=useSavedRecipes();
   const [screen, setScreen] = useState(readScreen);
@@ -67,6 +71,7 @@ export function App() {
   const [detailSavedDestination, setDetailSavedDestination] = useState<'fridge-registered' | 'fridge-food' | null>(null);
   const [listDeletion, setListDeletion] = useState<{ storage: typeof storage; message: string; removed?: RemovedIngredient }>();
   const ingredients = useIngredients();
+  const firstUseEligibility = useFirstUseEligibility();
   const dashboard = useDashboardReports(ingredients.items, ingredients.error);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | undefined>();
   const [registrationMessage, setRegistrationMessage] = useState('');
@@ -82,6 +87,9 @@ export function App() {
   const [recipeSelection, setRecipeSelection] = useState<string[] | undefined>();
   const registering = useRef(false);
   const recognition = useRecognition();
+  useEffect(() => {
+    if (firstUseGuidePending && firstUseEligibility.loaded && (ingredients.items.length > 0 || firstUseEligibility.hasUsedAppBefore)) onFirstUseGuideComplete();
+  }, [firstUseGuidePending, firstUseEligibility.loaded, firstUseEligibility.hasUsedAppBefore, ingredients.items.length, onFirstUseGuideComplete]);
   useEffect(()=>{ const open=(event:Event)=>{setOpenedRecipe((event as CustomEvent<Recipe>).detail);window.location.hash='recipe-detail?recipe='+encodeURIComponent((event as CustomEvent<Recipe>).detail.id);};window.addEventListener('kokjipseo:open-saved-recipe',open);return()=>window.removeEventListener('kokjipseo:open-saved-recipe',open);},[]);
   useEffect(() => {
     const onHashChange = () => {
@@ -256,5 +264,5 @@ export function App() {
     </div>
   );
   };
-  return <>{renderScreen()}<FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} /></>;
+  return <>{renderScreen()}{firstUseGuidePending && firstUseEligibility.loaded && !firstUseEligibility.hasUsedAppBefore && screen === 'home' && ingredients.items.length === 0 && <FirstUseGuide onClose={onFirstUseGuideComplete} />}<FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} /></>;
 }
