@@ -3,7 +3,7 @@
 1. 이 변경사항을 PR로 master에 머지합니다.
 2. 저장소 Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 선택합니다.
 3. master push마다 Actions의 Deploy GitHub Pages가 의존성 설치, 테스트, 빌드, 배포를 순서대로 실행합니다. Actions → Deploy GitHub Pages → Run workflow에서도 master를 선택해 재실행할 수 있습니다.
-4. 배포 성공 후 GitHub Pages 환경에 표시되는 URL로 접속합니다. 기본 주소는 https://younjeong-814.github.io/kokjipseotest/ 입니다.
+4. 배포 성공 후 GitHub Pages 환경에 표시되는 URL로 접속합니다. 기본 주소는 https://younjeong-814.github.io/Kokjipseo/ 입니다.
 
 Pages가 제공하는 base_path를 Vite의 --base 옵션으로 전달하므로 저장소 하위 경로에서도 JS/CSS와 asset() 이미지 경로가 연결됩니다. 기존 해시 라우팅을 유지합니다. 로컬 vite.config.ts와 개발 서버는 변경하지 않습니다. 배포 파일은 dist만 업로드합니다.
 
