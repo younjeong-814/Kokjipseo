@@ -92,9 +92,44 @@ before(async()=>{
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.uid() to anon,authenticated,service_role;`);
  for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql','202611070001_capture_budget_20.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
+ await db.exec(readFileSync(new URL('../supabase/migrations/202611100001_second_survey.sql',import.meta.url),'utf8'));
 });
 after(()=>db.close());
 async function asUser(id,fn){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await fn();}finally{await db.exec('reset role');}}
+test('second survey waits for the first update, reappears on later due notices, and stops after submission', async () => {
+ const owner = crypto.randomUUID(), item = crypto.randomUUID();
+ const first = crypto.randomUUID(), next = crypto.randomUUID(), last = crypto.randomUUID();
+ const invite = async (digest, updated) =>
+  (await db.query('select public.get_ut_second_survey($1,$2) as code',[digest,updated])).rows[0].code;
+
+ await db.exec('begin');
+ try {
+  await db.query('insert into auth.users values($1)',[owner]);
+  for (const [digest, type, sentAt] of [[first,'3_days','2026-11-07'],[next,'1_day','2026-11-09'],[last,'due_today','2026-11-10']]) {
+   await db.query(`insert into public.email_notification_deliveries
+    (user_id,ingredient_id,expiry_date,reminder_type,scheduled_at,settings_revision,next_attempt_at,status,sent_at,digest_id)
+    values ($1,$2,'2026-11-10',$3,$4,1,$4,'sent',$4,$5)`,[owner,item,type,sentAt,digest]);
+  }
+  const code = await asUser(owner,async () => {
+   assert.equal(await invite(first,false),null);
+   assert.ok(await invite(next,false));
+   const afterUpdate = await invite(first,true);
+   assert.equal(await invite(last,false),afterUpdate);
+   return afterUpdate;
+  });
+  assert.equal(await asUser(b,()=>invite(next,true)),null);
+  assert.equal((await db.query("select has_function_privilege('authenticated','public.complete_ut_second_survey(uuid)','execute') as allowed")).rows[0].allowed,false);
+  await db.exec('set role service_role');
+  await db.query('select public.complete_ut_second_survey($1)',[code]);
+  await db.exec('reset role');
+  await asUser(owner,async () => {
+   assert.equal(await invite(last,false),null);
+   assert.equal(await invite(first,true),null);
+  });
+ } finally {
+  await db.exec('rollback');
+ }
+});
 test('migration compiles; direct browser writes/hash reads and service RPC access are blocked',async()=>{
  await asUser(a,async()=>{
   await assert.rejects(()=>db.query('insert into public.email_notification_settings(user_id,email,email_verified_at,enabled,consent_at,consent_version) values($1,$2,now(),true,now(),$3)',[a,'forged@example.com','email-reminders-v1']),/permission denied/);
