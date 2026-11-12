@@ -90,7 +90,7 @@ before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.uid() to anon,authenticated,service_role;`);
- for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql','202611070001_capture_budget_20.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+ for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql','202611070001_capture_budget_20.sql','202611120001_ut_recruitment_sources.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
  await db.exec(readFileSync(new URL('../supabase/migrations/202611100001_second_survey.sql',import.meta.url),'utf8'));
 });
@@ -195,7 +195,13 @@ test('screen views need consent, a valid screen name and an allowed source',asyn
   assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'home','ads') as ok",[crypto.randomUUID()])).rows[0].ok,false);
   const row=(await db.query("select screen,source from public.ut_events where event_type='screen_view'")).rows;
   assert.deepEqual(row,[{screen:'manual-entry',source:'pickply'}]);
+  for(const source of ['instagram','community','platform']){
+   const key=crypto.randomUUID();
+   assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'home',$2) as ok",[key,source])).rows[0].ok,true);
+   assert.equal((await db.query('select source from public.ut_events where event_key=$1',[key])).rows[0].source,source);
+  }
   await db.query('select public.set_ut_participation(false)');
+  for(const source of ['instagram','community','platform'])assert.equal((await db.query("select public.record_ut_event($1,'screen_view',null,null,'home',$2) as ok",[crypto.randomUUID(),source])).rows[0].ok,false);
  });
 });
 test('queue leases prevent duplicate claims, retries stop at three, and eligibility is checked before send',async()=>{

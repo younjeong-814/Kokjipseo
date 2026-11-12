@@ -12,14 +12,17 @@ const clickKeys=new Map<string,string>();
 const lastScreens=new Map<string,string>();
 type UTEventType='app_open'|'notification_click'|'ingredient_view'|'ingredient_manage'|'screen_view';
 /** 첫 진입 경로(?src=pickply, 메일 링크의 source=email)를 이 탭에서 기억한다. 사용자 식별에는 쓰지 않는다. */
-export function entrySource():'pickply'|'email'|null{
+const recruitmentSources=['pickply','instagram','community','platform'] as const;
+type EntrySource=typeof recruitmentSources[number]|'email';
+const isRecruitmentSource=(value:string|null):value is typeof recruitmentSources[number]=>recruitmentSources.some(source=>source===value);
+export function entrySource():EntrySource|null{
   const search=new URLSearchParams(window.location.search).get('src');
   const hash=new URLSearchParams(window.location.hash.split('?')[1]??'').get('source');
-  const found=hash==='email'?'email':search==='pickply'?'pickply':null;
+  const found=hash==='email'?'email':isRecruitmentSource(search)?search:null;
   try{
     if(found)sessionStorage.setItem(SOURCE_KEY,found);
     const saved=sessionStorage.getItem(SOURCE_KEY);
-    return saved==='pickply'||saved==='email'?saved:null;
+    return isRecruitmentSource(saved)||saved==='email'?saved:null;
   }catch{return found;}
 }
 export const currentScreen=()=>window.location.hash.slice(1).split('?')[0]||'home';
