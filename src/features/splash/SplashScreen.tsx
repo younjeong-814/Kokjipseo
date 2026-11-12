@@ -5,7 +5,7 @@ type SplashScreenProps = { onEnter: () => void };
 
 export function SplashScreen({ onEnter }: SplashScreenProps) {
   useEffect(() => {
-    const timer = window.setTimeout(onEnter, 2000);
+    const timer = window.setTimeout(onEnter, 3000);
     return () => window.clearTimeout(timer);
   }, [onEnter]);
 
