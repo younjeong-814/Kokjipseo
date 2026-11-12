@@ -48,6 +48,7 @@ import { WeeklyReportPage } from './features/report/WeeklyReportPage';
 import { buildWeeklyReport, loadHistory } from './features/report/weeklyReport';
 import { FridgeNotifications } from './features/notifications/FridgeNotifications';
 import { FirstUseGuide } from './features/splash/FirstUseGuide';
+import { useOnboarding } from './features/splash/OnboardingContext';
 import { useFirstUseEligibility } from './features/cloud/FirstUseEligibilityContext';
 import { additionalConnections, isScreenId, screens, type ScreenId } from './prototype/flow';
 function readScreen(): ScreenId {
@@ -73,6 +74,7 @@ export function App({ firstUseGuidePending = false, onFirstUseGuideComplete = ()
   const [listDeletion, setListDeletion] = useState<{ storage: typeof storage; message: string; removed?: RemovedIngredient }>();
   const ingredients = useIngredients();
   const firstUseEligibility = useFirstUseEligibility();
+  const onboarding = useOnboarding();
   const dashboard = useDashboardReports(ingredients.items, ingredients.error);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | undefined>();
   const [registrationMessage, setRegistrationMessage] = useState('');
@@ -274,5 +276,5 @@ export function App({ firstUseGuidePending = false, onFirstUseGuideComplete = ()
     </div>
   );
   };
-  return <>{renderScreen()}{firstUseGuidePending && firstUseEligibility.loaded && !firstUseEligibility.hasUsedAppBefore && screen === 'home' && ingredients.items.length === 0 && <FirstUseGuide onClose={onFirstUseGuideComplete} />}<FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} /></>;
+  return <>{renderScreen()}{firstUseGuidePending && firstUseEligibility.loaded && !firstUseEligibility.hasUsedAppBefore && screen === 'home' && ingredients.items.length === 0 && <FirstUseGuide onClose={() => { onboarding.requestWelcome(); onFirstUseGuideComplete(); }} />}<FridgeNotifications screen={screen} items={ingredients.items} registrationActive={showRegistrationToast} registrationMessage={registrationMessage} onDismissRegistration={() => setShowRegistrationToast(false)} /></>;
 }

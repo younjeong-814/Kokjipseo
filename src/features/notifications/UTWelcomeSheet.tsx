@@ -4,13 +4,15 @@ import {OverlayDialog} from '../../components/OverlayDialog';
 import {supabase} from '../cloud/client';
 import {setUTParticipation} from './client';
 import {entrySource} from './UTTracker';
+import {useOnboarding} from '../splash/OnboardingContext';
 
 /** Test entry guidance is separate from the survey shown after registration. */
 export function UTWelcomeSheet({userId}:{userId:string}){
+  const {guidePending,welcomeRequested}=useOnboarding();
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const working=useRef(false);
   useEffect(()=>{
-    if(!supabase||entrySource()!=='pickply')return;
+    if(!supabase||guidePending||(!welcomeRequested&&entrySource()!=='pickply'))return;
     let live=true;
     void(async()=>{
       const result=await supabase!.from('ut_participants').select('status').eq('user_id',userId).maybeSingle();
@@ -18,8 +20,8 @@ export function UTWelcomeSheet({userId}:{userId:string}){
       if(live&&!result.error&&!result.data)setOpen(true);
     })().catch(()=>{});
     return()=>{live=false;};
-  },[userId]);
-  if(!open)return null;
+  },[userId,guidePending,welcomeRequested]);
+  if(!open||guidePending)return null;
   const start=async()=>{
     if(working.current)return;
     working.current=true;setBusy(true);setError('');
