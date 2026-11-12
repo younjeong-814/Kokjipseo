@@ -1,10 +1,12 @@
+import { asset } from '../../lib/assets';
+
 export function FirstUseGuide({ onClose }: { onClose: () => void }) {
   return <div className="first-use-guide" role="dialog" aria-modal="true" aria-labelledby="first-use-guide-title">
     <div className="first-use-guide-frame">
       <GuideBackdrop />
-      <img className="first-use-guide-dim" src="/assets/first-use-guide-dim.svg" alt="" />
+      <img className="first-use-guide-dim" src={asset('first-use-guide-dim.svg')} alt="" />
       <button type="button" className="first-use-guide-close" aria-label="가이드 닫기" onClick={onClose}>
-        <img src="/assets/first-use-guide-close.svg" alt="" />
+        <img src={asset('first-use-guide-close.svg')} alt="" />
       </button>
       <header className="first-use-guide-header">
         <p>콕집서 첫 이용 가이드</p>
@@ -14,12 +16,12 @@ export function FirstUseGuide({ onClose }: { onClose: () => void }) {
         <h2>소비 권장일을 한눈에 확인해요</h2>
         <p>등록한 식재료의 소비 권장일을 쉽게 확인할 수 있어요.</p>
       </section>
-      <img className="first-use-guide-expiry-curve" src="/assets/first-use-guide-curve-expiry.svg" alt="" />
+      <img className="first-use-guide-expiry-curve" src={asset('first-use-guide-curve-expiry.svg')} alt="" />
       <section className="first-use-guide-recipes" aria-label="레시피 안내">
         <h2>임박한 식재료로 레시피를 찾아보세요</h2>
         <p>소비 권장일이 가까운 식재료를 활용한 레시피를 확인할 수 있어요.</p>
       </section>
-      <img className="first-use-guide-recipe-curve" src="/assets/first-use-guide-curve-recipes.svg" alt="" />
+      <img className="first-use-guide-recipe-curve" src={asset('first-use-guide-curve-recipes.svg')} alt="" />
     </div>
   </div>;
 }
@@ -35,7 +37,7 @@ function GuideBackdrop() {
       <h2>내 냉장고 요약</h2>
       <div className="first-use-guide-mock-summary-card">
         {(['냉장', '냉동', '실온'] as const).map((name, index) => <div className="first-use-guide-mock-summary-item" key={name}>
-          <span className={`storage-icon storage-icon-${index}`}><img src="/assets/storage.png" alt="" /></span>
+          <span className={`storage-icon storage-icon-${index}`}><img src={asset('storage.png')} alt="" /></span>
           <span>{name}</span><strong>{[18, 12, 2][index]}개</strong>
         </div>)}
       </div>
@@ -48,18 +50,18 @@ function GuideBackdrop() {
       <GuideIngredient image="thumb-vegetable.png" name="대파" info="냉장 · 2대" badge="D-1" />
     </section>
     <nav className="first-use-guide-mock-nav">
-      <span className="selected"><img src="/assets/home.svg" alt=""/>홈</span>
-      <span><img src="/assets/nav-2.svg" alt=""/>냉장고</span>
-      <span><img src="/assets/nav-5.svg" alt=""/>등록</span>
-      <span><img src="/assets/recipe-active.svg" alt=""/>레시피</span>
-      <span><img src="/assets/nav-1.svg" alt=""/>마이</span>
+      <span className="selected"><img src={asset('home.svg')} alt=""/>홈</span>
+      <span><img src={asset('nav-2.svg')} alt=""/>냉장고</span>
+      <span><img src={asset('nav-5.svg')} alt=""/>등록</span>
+      <span><img src={asset('recipe-active.svg')} alt=""/>레시피</span>
+      <span><img src={asset('nav-1.svg')} alt=""/>마이</span>
     </nav>
   </div>;
 }
 
 function GuideIngredient({ image, name, info, badge }: { image: string; name: string; info: string; badge: string }) {
   return <div className="first-use-guide-mock-row">
-    <img className="first-use-guide-mock-thumb" src={`/assets/${image}`} alt="" />
+    <img className="first-use-guide-mock-thumb" src={asset(image)} alt="" />
     <span className="first-use-guide-mock-copy"><strong>{name}</strong><span>{info}</span></span>
     <span className={`first-use-guide-mock-badge${badge === '기한경과' ? ' expired' : ''}`}>{badge}</span>
   </div>;
