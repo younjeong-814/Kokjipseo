@@ -1,9 +1,17 @@
+import { useEffect } from 'react';
+import { asset } from '../../lib/assets';
+
 type SplashScreenProps = { onEnter: () => void };
 
 export function SplashScreen({ onEnter }: SplashScreenProps) {
+  useEffect(() => {
+    const timer = window.setTimeout(onEnter, 2000);
+    return () => window.clearTimeout(timer);
+  }, [onEnter]);
+
   return <button type="button" className="splash-screen" onClick={onEnter} aria-label="콕집서 시작하기">
     <span className="splash-brand">
-      <img className="splash-logo" src="/assets/splash-logo.png" alt="콕집서" />
+      <img className="splash-logo" src={asset('splash-logo.png')} alt="콕집서" />
       <span className="splash-tagline"><span>잊기 전에 <strong>콕</strong>,</span><span>내 냉장고를 챙겨요.</span></span>
     </span>
     <span className="splash-footer">내 냉장고를 위한 작은 습관</span>
