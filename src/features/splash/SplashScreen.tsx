@@ -1,8 +1,14 @@
+import { useEffect } from 'react';
 import { asset } from '../../lib/assets';
 
 type SplashScreenProps = { onEnter: () => void };
 
 export function SplashScreen({ onEnter }: SplashScreenProps) {
+  useEffect(() => {
+    const timer = window.setTimeout(onEnter, 2000);
+    return () => window.clearTimeout(timer);
+  }, [onEnter]);
+
   return <button type="button" className="splash-screen" onClick={onEnter} aria-label="콕집서 시작하기">
     <span className="splash-brand">
       <img className="splash-logo" src={asset('splash-logo.png')} alt="콕집서" />

@@ -4,7 +4,9 @@ export function FirstUseGuide({ onClose }: { onClose: () => void }) {
   return <div className="first-use-guide" role="dialog" aria-modal="true" aria-labelledby="first-use-guide-title">
     <div className="first-use-guide-frame">
       <GuideBackdrop />
-      <img className="first-use-guide-dim" src={asset('first-use-guide-dim.svg')} alt="" />
+      <button type="button" className="first-use-guide-dismiss" aria-label="배경을 눌러 가이드 닫기" onClick={onClose}>
+        <img className="first-use-guide-dim" src={asset('first-use-guide-dim.svg')} alt="" />
+      </button>
       <button type="button" className="first-use-guide-close" aria-label="가이드 닫기" onClick={onClose}>
         <img src={asset('first-use-guide-close.svg')} alt="" />
       </button>
