@@ -1,0 +1,109 @@
+.first-use-guide {
+  position:fixed;
+  z-index:10000;
+  top:max(0px,calc((100dvh - 844px) / 2));
+  left:50%;
+  width:min(100vw,390px);
+  height:min(100dvh,844px);
+  transform:translateX(-50%);
+  overflow:hidden;
+  pointer-events:auto;
+}
+.first-use-guide-frame {
+  position:relative;
+  width:100%;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+  flex:0 0 auto;
+  pointer-events:auto;
+}
+.first-use-guide-dim {
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:fill;
+}
+.first-use-guide-backdrop { position:absolute; inset:0; overflow:hidden; background:#fff; color:#2a3038; }
+.first-use-guide-mock-header { position:absolute; top:58px; left:20px; font-size:32px; line-height:42px; font-weight:700; }
+.first-use-guide-mock-banner { position:absolute; top:116px; left:0; width:100%; padding:12px 20px; }
+.first-use-guide-mock-banner > div { width:100%; }
+.first-use-guide-mock-banner h2,
+.first-use-guide-mock-banner p { width:100%; }
+.first-use-guide-mock-banner h2 { font-size:20px; line-height:27px; font-weight:700; }
+.first-use-guide-mock-banner p { margin-top:12px; color:#555d6d; font-size:16px; line-height:22px; }
+.first-use-guide-mock-summary { position:absolute; top:263px; left:0; width:100%; padding:12px 20px; }
+.first-use-guide-mock-summary > h2,
+.first-use-guide-mock-list > h2 { font-size:24px; line-height:32px; font-weight:700; }
+.first-use-guide-mock-summary-card { display:flex; align-items:center; justify-content:space-between; height:116px; margin-top:12px; padding:16px; border-radius:16px; background:#eaf5fe; }
+.first-use-guide-mock-summary-item { display:flex; flex:1; flex-direction:column; align-items:center; gap:8px; color:#868b94; font-size:12px; line-height:16px; }
+.first-use-guide-mock-summary-item strong { color:#2a3038; font-size:16px; line-height:22px; }
+.first-use-guide-mock-summary-item .storage-icon { flex:0 0 24px; }
+.first-use-guide-mock-list { position:absolute; top:441px; left:0; width:100%; height:343px; overflow:hidden; padding:12px 20px; background:#fff; }
+.first-use-guide-mock-list > h2 { margin-bottom:12px; }
+.first-use-guide-mock-row { display:flex; align-items:center; gap:12px; width:350px; min-height:74px; border-bottom:1px solid #dcdee3; }
+.first-use-guide-mock-row:first-of-type { min-height:68px; padding:12px 8px; border-bottom:0; border-radius:14px; background:#fff; }
+.first-use-guide-mock-thumb { display:block; flex:0 0 44px; width:44px; height:44px; object-fit:cover; }
+.first-use-guide-mock-copy { display:flex; flex:1; flex-direction:column; gap:4px; min-width:0; color:#555d6d; font-size:14px; line-height:19px; }
+.first-use-guide-mock-copy strong { overflow:hidden; color:#2a3038; font-size:18px; line-height:24px; text-overflow:ellipsis; white-space:nowrap; }
+.first-use-guide-mock-badge { flex:0 0 auto; padding:4px 8px; border-radius:8px; background:#189129; color:#fff; font-size:12px; line-height:16px; font-weight:700; }
+.first-use-guide-mock-badge.expired { background:#e53359; }
+.first-use-guide-mock-row:nth-of-type(2) .first-use-guide-mock-badge { background:#fb804a; }
+.first-use-guide-mock-nav { position:absolute; top:784px; left:0; display:flex; align-items:center; width:100%; height:60px; padding:9px; background:#fff; }
+.first-use-guide-mock-nav span { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#b0b3ba; font-size:11px; line-height:normal; font-weight:700; }
+.first-use-guide-mock-nav span.selected { color:#2a9df8; }
+.first-use-guide-mock-nav img { display:block; width:24px; height:24px; object-fit:contain; }
+.first-use-guide-close {
+  position:absolute;
+  z-index:3;
+  top:32px;
+  right:24px;
+  display:block;
+  width:24px;
+  height:24px;
+  padding:0;
+  background:transparent;
+  pointer-events:auto;
+}
+.first-use-guide-close img { display:block; width:24px; height:24px; }
+.first-use-guide-header,
+.first-use-guide-expiry,
+.first-use-guide-recipes {
+  position:absolute;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  color:#fff;
+  font-style:normal;
+  line-height:1.5;
+  pointer-events:none;
+  z-index:2;
+}
+.first-use-guide-header { top:58px; left:32px; width:calc(100% - 64px); }
+.first-use-guide-header p { font-size:14px; font-weight:400; }
+.first-use-guide-header h1 { font-size:23px; line-height:1.5; font-weight:700; }
+.first-use-guide-expiry { top:325px; left:28px; width:calc(100% - 56px); }
+.first-use-guide-expiry h2,
+.first-use-guide-recipes h2 { font-size:18px; line-height:1.5; font-weight:700; }
+.first-use-guide-expiry p,
+.first-use-guide-recipes p { font-size:14px; line-height:1.5; font-weight:400; }
+.first-use-guide-expiry-curve,
+.first-use-guide-recipe-curve {
+  position:absolute;
+  display:block;
+  width:62px;
+  height:112px;
+  pointer-events:none;
+}
+.first-use-guide-expiry-curve { top:385px; left:58px; transform:rotate(180deg) scaleY(-1); }
+.first-use-guide-recipes { top:593px; left:35px; width:calc(100% - 70px); }
+.first-use-guide-recipe-curve { top:673px; left:calc(50% + 54px); }
+.first-use-guide-close:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:4px; }
+@media (max-height:843px) {
+  .first-use-guide-expiry { top:38.5dvh; }
+  .first-use-guide-expiry-curve { top:45.6dvh; }
+  .first-use-guide-recipes { top:70.3dvh; }
+  .first-use-guide-recipe-curve { top:79.7dvh; }
+}
