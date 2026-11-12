@@ -8,11 +8,17 @@
   transform:translateX(-50%);
   overflow:hidden;
   pointer-events:auto;
+  background:#303b46;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
 }
 .first-use-guide-frame {
-  position:relative;
-  width:100%;
-  height:100%;
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:390px;
+  height:844px;
+  transform-origin:center;
   min-height:0;
   overflow:hidden;
   flex:0 0 auto;
@@ -112,9 +118,3 @@
 .first-use-guide-recipes { top:593px; left:35px; width:calc(100% - 70px); }
 .first-use-guide-recipe-curve { top:673px; left:calc(50% + 54px); }
 .first-use-guide-close:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:4px; }
-@media (max-height:843px) {
-  .first-use-guide-expiry { top:38.5dvh; }
-  .first-use-guide-expiry-curve { top:45.6dvh; }
-  .first-use-guide-recipes { top:70.3dvh; }
-  .first-use-guide-recipe-curve { top:79.7dvh; }
-}

@@ -1,8 +1,21 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { asset } from '../../lib/assets';
 
 export function FirstUseGuide({ onClose }: { onClose: () => void }) {
-  return <div className="first-use-guide" role="dialog" aria-modal="true" aria-labelledby="first-use-guide-title">
-    <div className="first-use-guide-frame">
+  const container = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    // Keep the SVG cutouts, mock screen and annotations in one coordinate system.
+    const resize = () => setScale(Math.min(node.clientWidth / 390, node.clientHeight / 844, 1));
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={container} className="first-use-guide" role="dialog" aria-modal="true" aria-labelledby="first-use-guide-title" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="first-use-guide-frame" style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
       <GuideBackdrop />
       <button type="button" className="first-use-guide-dismiss" aria-label="배경을 눌러 가이드 닫기" onClick={onClose}>
         <img className="first-use-guide-dim" src={asset('first-use-guide-dim.svg')} alt="" />
