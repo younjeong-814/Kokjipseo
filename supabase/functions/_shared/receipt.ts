@@ -7,6 +7,7 @@ import {groupRows,type OcrWord,type ReceiptItem} from './generated/receiptParse.
 const MAX_LINES=150;
 const MAX_LINE_LENGTH=100;
 const MAX_ITEMS=80;
+const STRUCTURING_BUDGET_MS=5000;
 
 const PROMPT=[
   '아래는 마트 영수증을 OCR로 읽은 줄 목록이다. 각 줄 앞의 숫자는 줄 번호다.',
@@ -60,18 +61,31 @@ export async function structureReceipt(key:string,model:string,lines:string[],fe
   const rows=lines.slice(0,MAX_LINES).map(line=>line.slice(0,MAX_LINE_LENGTH));
   const text=`${PROMPT}\n\n${rows.map((line,index)=>`${index}: ${line}`).join('\n')}`;
   const thinking=thinkingConfig(model);
-  const request=(withThinking:boolean)=>fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},signal:AbortSignal.timeout(30000),
-    body:JSON.stringify({contents:[{parts:[{text}]}],generationConfig:{temperature:0,responseMimeType:'application/json',responseJsonSchema:SCHEMA,...(withThinking&&thinking?{thinkingConfig:thinking}:{})}}),
+  const controller=new AbortController();
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  // 헤더뿐 아니라 응답 본문 읽기까지 5초로 제한한다. 취소가 늦어져도 규칙 파서로 돌아간다.
+  const deadline=new Promise<never>((_,reject)=>{
+    timer=setTimeout(()=>{
+      controller.abort();
+      reject(new Error('receipt structuring timed out'));
+    },STRUCTURING_BUDGET_MS);
   });
-  let response=await request(true);
-  // 모델이 생각 설정을 지원하지 않으면(400) 설정 없이 한 번 더 요청한다.
-  if(response.status===400&&thinking)response=await request(false);
-  if(!response.ok)throw new Error(`Gemini ${response.status}`);
-  const data=await response.json();
-  const output=data.candidates?.[0]?.content?.parts?.map((p:{text?:string})=>p.text??'').join('');
-  if(!output)throw new Error('empty receipt result');
-  return parseReceiptItems(JSON.parse(output),rows);
+  const request=async()=>{
+    // 품목 정리는 보조 단계이므로 실패 시 추가 API 호출 없이 기존 규칙을 사용한다.
+    const response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
+      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},signal:controller.signal,
+      body:JSON.stringify({contents:[{parts:[{text}]}],generationConfig:{temperature:0,responseMimeType:'application/json',responseJsonSchema:SCHEMA,...(thinking?{thinkingConfig:thinking}:{})}}),
+    });
+    controller.signal.throwIfAborted();
+    if(!response.ok)throw new Error(`Gemini ${response.status}`);
+    const data=await response.json();
+    controller.signal.throwIfAborted();
+    const output=data.candidates?.[0]?.content?.parts?.map((p:{text?:string})=>p.text??'').join('');
+    if(!output)throw new Error('empty receipt result');
+    return parseReceiptItems(JSON.parse(output),rows);
+  };
+  try{return await Promise.race([request(),deadline]);}
+  finally{clearTimeout(timer);}
 }
 
 /** OCR 응답 본문. Gemini 설정이 없거나 실패하면 items 없이 words만 보내고, 브라우저가 규칙 파서로 처리한다. */

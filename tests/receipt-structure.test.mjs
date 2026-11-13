@@ -58,3 +58,42 @@ test('checks the neighbouring lines when OCR splits a product name in two', () =
   const split = ['백설 콩 2 990 1,980s', '식용유 1.8L', '8801007402345'];
   assert.equal(parseReceiptItems({ items: [{ name: '콩식용유', quantity: 2, line: 0 }] }, split)[0].suspicious, false);
 });
+
+test('slow Gemini falls back at five seconds and aborts the only request', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const words = [word('대파', 0), word('990', 0)];
+  let calls = 0, signal, settled = false;
+  const pending = receiptResponse(words, 'K', 'gemini-3.6-flash', async (_url, init) => {
+    calls++; signal = init.signal;
+    return new Promise(() => {}); // Even a transport ignoring abort cannot block fallback.
+  }).then(result => { settled = true; return result; });
+  t.mock.timers.tick(4999);
+  await Promise.resolve();
+  assert.equal(settled, false);
+  t.mock.timers.tick(1);
+  assert.deepEqual(await pending, { words });
+  assert.equal(signal.aborted, true);
+  assert.equal(calls, 1);
+});
+
+test('five-second budget includes a stalled response body', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const words = [word('두부', 0)];
+  let bodyStarted;
+  const started = new Promise(resolve => { bodyStarted = resolve; });
+  const pending = receiptResponse(words, 'K', 'gemini-3.6-flash', async () => ({
+    ok: true, json: () => { bodyStarted(); return new Promise(() => {}); },
+  }));
+  await started;
+  t.mock.timers.tick(5000);
+  assert.deepEqual(await pending, { words });
+});
+
+test('unsupported thinking config does not cause another paid request', async () => {
+  const words = [word('대파', 0)];
+  let calls = 0;
+  assert.deepEqual(await receiptResponse(words, 'K', 'gemini-3.6-flash', async () => {
+    calls++; return new Response('', { status: 400 });
+  }), { words });
+  assert.equal(calls, 1);
+});
