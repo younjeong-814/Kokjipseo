@@ -2,7 +2,7 @@ import type {Env} from './http.ts';
 import {validEmail, type MailTransport} from './emailNotifications.ts';
 
 /** Minimal SMTP message shape (nodemailer-compatible). */
-export type SmtpMessage = {from:{name:string;address:string};to:string;subject:string;text:string};
+export type SmtpMessage = {from:{name:string;address:string};to:string;subject:string;text:string;html?:string};
 export type SmtpResult = {accepted?:unknown[];rejected?:unknown[];messageId?:string};
 export type SmtpSend = (message:SmtpMessage)=>Promise<SmtpResult>;
 

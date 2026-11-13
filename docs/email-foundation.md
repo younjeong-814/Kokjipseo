@@ -1,5 +1,7 @@
 # UT / 소비 권장일 이메일 알림 기반
 
+> 아래는 최초 기반 구현 당시 기록입니다. 2026-11-13 운영 Gmail 및 Cron 연결 작업의 현재 구성은 [운영 소비 권장일 알림](automatic-reminders.md)을 참조하세요.
+
 브랜치: `feature/yunjeong_email-foundation_v1`. 실제 Gmail / Resend 연결 전 준비 단계입니다.
 
 ## 현재 동작과 구현 경계

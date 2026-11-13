@@ -1,5 +1,7 @@
-import {createReminderWorker} from '../_shared/emailNotifications.ts';
 import {createResendTransport} from '../_shared/emailTransport.ts';
+import {createGmailReminderTransport} from '../_shared/gmailReminders.ts';
+import {createOperationalReminderHandler} from '../_shared/operationalReminders.ts';
 const env=Deno.env.toObject();
-// Still planning-only unless RESEND_API_KEY, EMAIL_FROM and EMAIL_DISPATCH_ENABLED=true are all set.
-Deno.serve(createReminderWorker(env,createResendTransport(env)));
+// Still planning-only until the scheduler and EMAIL_DISPATCH_ENABLED=true are configured.
+const transport=createResendTransport(env)??createGmailReminderTransport(env);
+Deno.serve(createOperationalReminderHandler(env,transport));

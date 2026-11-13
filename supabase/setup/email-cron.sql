@@ -16,6 +16,6 @@ select cron.schedule('kokjipseo-email-reminder-plan','*/10 * * * *', $job$
     headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',
       (select decrypted_secret from vault.decrypted_secrets where name='email_cron_secret')),
     body := '{}'::jsonb,
-    timeout_milliseconds := 10000
+    timeout_milliseconds := 60000
   );
 $job$);
