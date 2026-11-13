@@ -16,3 +16,37 @@ test('explicit consumption overrides expired/spoiled classification, removes onl
 test('history storage failure keeps item; item storage failure rolls history back',()=>{
  for(const key of [repo.INGREDIENTS_KEY,report.REPORT_HISTORY_KEY]){const db=setup();const [item]=repo.saveIngredient(db,draft);report.recordDisposal(db,item,new Date(),'discarded');const original=db.getItem(report.REPORT_HISTORY_KEY);db.fail(key);assert.throws(()=>consumeIngredient(db,item.id));assert.equal(repo.loadIngredients(db).length,1);assert.equal(db.getItem(report.REPORT_HISTORY_KEY),original);}
 });
+
+// Execute the actual detail-page callbacks so food cannot silently skip survey notification.
+function detailHandler(name,item,events,fail=false){
+ const source=ts.createSourceFile('App.tsx',readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ let expression;
+ const visit=node=>{if(ts.isJsxSelfClosingElement(node)&&node.tagName.getText(source)==='IngredientDetailPage'){
+  const attribute=node.attributes.properties.find(value=>ts.isJsxAttribute(value)&&value.name.getText(source)===name);
+  expression=attribute?.initializer?.expression?.getText(source);
+ }ts.forEachChild(node,visit);};visit(source);
+ assert.ok(expression,`${name} callback exists`);
+ const code=ts.transpileModule(`return (${expression});`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const save=()=>{if(fail)throw Error('save failed');events.push('saved');};
+ return new Function('ingredients','item','isFood','notifyIngredientStatusUpdated','navigate','detailOrigin','setDetailSavedDestination',code)(
+  {recordCondition:save,updateDetails:save,consume:save,remove:save},item,value=>value.kind==='food',()=>events.push('survey'),()=>events.push('navigate'),'fridge',()=>{});
+}
+
+test('food and ingredients notify the survey after condition, quantity, consumption and disposal updates',()=>{
+ for(const kind of ['food','ingredient'])for(const name of ['onCondition','onSave','onConsume','onDiscard']){
+  const events=[],item={id:'item',kind,storage:'냉장',date:'2026-11-14',remainingPercent:100};
+  detailHandler(name,item,events)(name==='onSave'?{...item,remainingPercent:75}:'괜찮아요');
+  assert.deepEqual(events.slice(0,2),['saved','survey'],`${kind}: ${name}`);
+ }
+});
+
+test('failed updates never invite a survey and unchanged detail saves do not count as updates',()=>{
+ const item={id:'item',kind:'food',storage:'냉장',date:'2026-11-14',remainingPercent:75};
+ for(const name of ['onCondition','onSave','onConsume','onDiscard']){
+  const events=[];
+  assert.throws(()=>detailHandler(name,item,events,true)({...item,remainingPercent:50}),/save failed/);
+  assert.deepEqual(events,[]);
+ }
+ const events=[];detailHandler('onSave',item,events)({...item});
+ assert.ok(!events.includes('survey'));
+});
