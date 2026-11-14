@@ -5,6 +5,7 @@ import { CloudRoot } from './features/cloud/CloudRoot';
 import { useState } from 'react';
 import { SplashScreen } from './features/splash/SplashScreen';
 import { OnboardingContext } from './features/splash/OnboardingContext';
+import { captureEntryContext } from './features/notifications/entryContext';
 import './styles/splash.css';
 import './styles/first-use-guide.css';
 import './styles/cloud.css';
@@ -20,6 +21,9 @@ import './styles/recipe.css';
 import './styles/fridge-search.css';
 import './styles/ingredients.css';
 import './styles/ingredient-detail.css';
+// Keep mail entry details before splash/auth/route effects replace the hash.
+captureEntryContext();
+window.addEventListener('hashchange', () => { captureEntryContext(); });
 function EntryPoint() {
   const [entered, setEntered] = useState(false);
   const [firstUseGuidePending, setFirstUseGuidePending] = useState(false);

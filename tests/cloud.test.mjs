@@ -11,6 +11,36 @@ const {parsePhotoResult,recognizePhoto}=load('../supabase/functions/_shared/phot
 const {configureExternalRequests,requestExternal}=load('../src/features/cloud/externalRequests.ts');
 const {ensureAnonymousSession}=load('../src/features/cloud/anonymous.ts');
 const {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS}=load('../src/features/notifications/verificationInput.ts');
+const {createEntryContext}=load('../src/features/notifications/entryContext.ts');
+
+test('email entry survives old campaign params, route changes, late survey mount and reload',()=>{
+ const values=new Map([['kokjipseo:entry-source','instagram']]);
+ const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ const digest='7c6a488f-eaae-4f30-9131-37404c3ddf11';
+ const context=createEntryContext(storage);
+ assert.deepEqual(context.capture('?src=instagram',`#fridge?source=email&digest=${digest}`,true),{source:'email',digest});
+ assert.deepEqual(context.capture('?src=instagram','#ingredient-detail?item=123'),{source:'email',digest});
+ assert.deepEqual(context.capture('?src=instagram','#fridge'),{source:'email',digest});
+ assert.deepEqual(createEntryContext(storage).capture('?src=instagram','#fridge',true),{source:'email',digest});
+});
+
+test('fresh campaign attribution is preserved and malformed digest is not accepted',()=>{
+ const storage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
+ for(const source of ['instagram','community','platform','pickply']){
+  const context=createEntryContext(storage);
+  assert.deepEqual(context.capture(`?src=${source}`,'#home',true),{source,digest:null});
+  assert.deepEqual(context.capture('', '#fridge'),{source,digest:null});
+ }
+ assert.deepEqual(createEntryContext(storage).capture('','#fridge?source=email&digest=invalid',true),{source:'email',digest:null});
+});
+
+test('email entry is retained in memory when browser storage throws',()=>{
+ const fail=()=>{throw new Error('blocked');};
+ const context=createEntryContext({getItem:fail,setItem:fail,removeItem:fail});
+ const digest='7c6a488f-eaae-4f30-9131-37404c3ddf11';
+ context.capture('',`#fridge?source=email&digest=${digest}`,true);
+ assert.deepEqual(context.capture('?src=instagram','#fridge'),{source:'email',digest});
+});
 
 test('verification paste keeps six digits after whitespace and preserves a leading zero',()=>{
  assert.equal(normalizeVerificationCode(' 012345\n'),'012345');
