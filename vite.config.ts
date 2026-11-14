@@ -38,10 +38,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   for (const [name,value] of Object.entries(env)) {
     if (!name.startsWith('VITE_')) continue;
-    const allowed=['VITE_SUPABASE_URL','VITE_SUPABASE_PUBLISHABLE_KEY','VITE_RECIPE_ENDPOINT','VITE_OCR_ENDPOINT','VITE_RECOGNIZE_ENDPOINT','VITE_UT_SECOND_SURVEY_ENTRY'];
+    const allowed=['VITE_SUPABASE_URL','VITE_SUPABASE_PUBLISHABLE_KEY','VITE_RECIPE_ENDPOINT','VITE_OCR_ENDPOINT','VITE_RECOGNIZE_ENDPOINT','VITE_UT_FIRST_SURVEY_ENTRY','VITE_UT_SECOND_SURVEY_ENTRY'];
     if(!allowed.includes(name)) throw new Error(`공개 환경변수를 확인해 주세요: ${name}. 비밀 키는 Supabase Secrets에만 설정하세요.`);
     if(name==='VITE_SUPABASE_PUBLISHABLE_KEY'&&value&&!value.startsWith('sb_publishable_')) throw new Error('공개용 Supabase publishable key만 사용할 수 있어요.');
-    if(name==='VITE_UT_SECOND_SURVEY_ENTRY'&&value&&!/^entry\.\d+$/.test(value)) throw new Error('설문 항목 번호는 entry.숫자 형식으로 설정해 주세요.');
+    if(/^VITE_UT_(FIRST|SECOND)_SURVEY_ENTRY$/.test(name)&&value&&!/^entry\.\d+$/.test(value)) throw new Error('설문 항목 번호는 entry.숫자 형식으로 설정해 주세요.');
     if(/sb_secret_|AIza|[?&](?:key|api_key|token)=/i.test(value)) throw new Error(`비밀 인증정보가 공개 변수에 포함될 수 있어요: ${name}`);
   }
   if(Boolean(env.VITE_SUPABASE_URL)!==Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY))throw new Error('Supabase URL과 publishable key를 함께 설정해 주세요.');

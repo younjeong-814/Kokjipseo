@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {OverlayDialog} from '../../components/OverlayDialog';
 import {supabase} from '../cloud/client';
 import {entrySource} from './UTTracker';
+import {useSurveyTracking} from './useSurveyTracking';
 import emailIcon from '../../assets/ut-survey/icon-email.svg';
 import surveyIcon from '../../assets/ut-survey/icon-survey.svg';
 import closeIcon from '../../assets/ut-survey/icon-close.svg';
@@ -11,6 +12,11 @@ const SURVEY_URL='https://docs.google.com/forms/d/e/1FAIpQLSdnLd4D7twDKh2W2oBpA3
 /** 첫 앱 방문에서 냉장고가 비어 있던 사용자가 첫 식재료를 등록하면 1차 사용성 설문을 안내한다. */
 export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;initialIngredientCount:number}){
   const [open,setOpen]=useState(false);
+  const tracking=useSurveyTracking(1);
+  const form=new URL(SURVEY_URL);
+  const entry=import.meta.env.VITE_UT_FIRST_SURVEY_ENTRY||'entry.443967875';
+  if(tracking.code&&entry&&/^entry\.\d+$/.test(entry))form.searchParams.set(entry,tracking.code);
+  const linked=Boolean(tracking.code&&entry&&/^entry\.\d+$/.test(entry));
   useEffect(()=>{
     if(!supabase)return;
     const firstVisitKey=`kokjipseo:ut-survey-first-visit:${userId}`;
@@ -44,7 +50,7 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
     return()=>{live=false;window.removeEventListener('kokjipseo:first-ingredient-registered',registered);};
   },[userId]);
   if(!open)return null;
-  return <OverlayDialog label="콕집서 1차 사용성 설문 안내" onClose={()=>setOpen(false)} dismissOutside={false} className="ut-consent-sheet">
+  return <OverlayDialog label="콕집서 1차 사용성 설문 안내" onOpen={tracking.onShown} onClose={()=>setOpen(false)} dismissOutside={false} className="ut-consent-sheet">
     <div className="ut-survey-content">
       <header className="ut-survey-header">
         <div>
@@ -64,7 +70,7 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
       </div>
     </div>
     <footer className="ut-survey-footer">
-      <a className="action-button ut-survey-cta" href={SURVEY_URL} target="_blank" rel="noreferrer">1차 설문 참여하기</a>
+      {linked?<a className="action-button ut-survey-cta" href={form.href} target="_blank" rel="noreferrer" onClick={tracking.onClick}>1차 설문 참여하기</a>:<button className="action-button ut-survey-cta" disabled={!tracking.error} onClick={tracking.onShown}>{tracking.error?'설문 연결 다시 시도':'설문 연결 준비 중'}</button>}
       <p>설문 응답은 서비스 개선을 위해 활용됩니다.</p>
     </footer>
   </OverlayDialog>;

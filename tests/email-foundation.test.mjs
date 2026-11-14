@@ -93,9 +93,61 @@ before(async()=>{
  for(const file of ['202610240001_ingredient_storage.sql','202610240002_cloud_snapshot.sql','202610240003_api_budget.sql','202610240004_revision_validation.sql','202610290001_email_foundation.sql','202610310001_email_settings_transfer.sql','202610310002_manual_reminder_test.sql','202610310003_self_reminder_test.sql','202611030001_email_digests.sql','202611050001_ut_screen_views.sql','202611070001_capture_budget_20.sql','202611120001_ut_recruitment_sources.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  await db.query('insert into auth.users values($1),($2)',[a,b]);
  await db.exec(readFileSync(new URL('../supabase/migrations/202611100001_second_survey.sql',import.meta.url),'utf8'));
+ await db.exec(readFileSync(new URL('../supabase/migrations/202611140001_survey_tracking.sql',import.meta.url),'utf8'));
 });
 after(()=>db.close());
 async function asUser(id,fn){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await fn();}finally{await db.exec('reset role');}}
+
+test('survey exposure and clicks are owner-scoped, consent gated and idempotent; only trusted submissions complete surveys',async()=>{
+ await db.exec('begin');
+ try{
+  const owner=crypto.randomUUID(),other=crypto.randomUUID(),item=crypto.randomUUID(),digest=crypto.randomUUID(),shown=crypto.randomUUID();
+  await db.query('insert into auth.users values($1),($2)',[owner,other]);
+  const event=async(stage,type,key=crypto.randomUUID(),mail=null)=>(await db.query('select public.record_ut_survey_event($1,$2,$3,$4,$5) as code',[stage,type,key,mail,'instagram'])).rows[0].code;
+  assert.equal(await asUser(owner,()=>event(1,'shown')),null);
+  await db.query("insert into public.ut_participants(user_id) values($1),($2)",[owner,other]);
+  assert.equal(await asUser(owner,()=>event(1,'shown')),null);
+  await db.query("insert into public.ingredients(id,user_id,name,category,payload) values($1,$2,'두부','두부·콩류',$3)",[item,owner,{id:item,name:'두부',category:'두부·콩류',kind:'ingredient'}]);
+  assert.equal(await asUser(owner,()=>event(1,'clicked')),null);
+  const code=await asUser(owner,()=>event(1,'shown',shown));
+  assert.ok(code);
+  assert.equal(await asUser(owner,()=>event(1,'shown',shown)),code);
+  assert.equal((await db.query('select count(*)::int as n from public.ut_survey_events')).rows[0].n,1);
+  assert.equal(await asUser(owner,()=>event(1,'clicked')),code);
+  assert.equal(await asUser(other,()=>event(1,'shown')),null);
+  assert.equal((await db.query("select has_function_privilege('authenticated','public.complete_ut_survey(integer,uuid,text)','execute') as allowed")).rows[0].allowed,false);
+  assert.equal((await db.query("select has_table_privilege('authenticated','public.ut_survey_events','insert') as allowed")).rows[0].allowed,false);
+  assert.equal((await db.query('select public.complete_ut_survey(2,$1,$2) as ok',[code,'response-stage-wrong'])).rows[0].ok,false);
+  await db.query('select public.complete_ut_survey(1,$1,$2)',[code,'response-1']);
+  await db.query('select public.complete_ut_survey(1,$1,$2)',[code,'response-1']);
+  assert.equal((await db.query('select count(*)::int as n from public.ut_survey_submissions')).rows[0].n,1);
+  assert.ok((await db.query('select submitted_at from public.ut_survey_links where participation_code=$1',[code])).rows[0].submitted_at);
+  await db.query("insert into public.email_notification_deliveries(user_id,ingredient_id,expiry_date,reminder_type,scheduled_at,settings_revision,status,sent_at,digest_id) values($1,$2,current_date,'3_days',now(),1,'sent',now(),$3)",[owner,item,digest]);
+  await asUser(owner,()=>db.query('select public.get_ut_second_survey($1,true)',[digest]));
+  assert.equal(await asUser(other,()=>event(2,'shown',crypto.randomUUID(),digest)),null);
+  const second=await asUser(owner,()=>event(2,'shown',crypto.randomUUID(),digest));assert.ok(second);assert.notEqual(second,code);
+  await db.query('select public.complete_ut_survey(2,$1,$2)',[second,'response-2']);
+  assert.ok((await db.query('select completed_at from public.ut_second_survey where user_id=$1',[owner])).rows[0].completed_at);
+  await db.query("update public.ut_participants set status='withdrawn' where user_id=$1",[owner]);
+  assert.equal(await asUser(owner,()=>event(1,'shown')),null);
+  assert.equal((await db.query('select public.complete_ut_survey(1,$1,$2) as ok',[code,'response-withdrawn'])).rows[0].ok,false);
+ }finally{await db.exec('rollback');}
+});
+
+test('survey completion webhook rejects browser calls and invalid payloads without disclosing codes or provider failures',async()=>{
+ const {createSurveyCompletionHandler}=load('../supabase/functions/_shared/surveyCompletion.ts');
+ const env={UT_SURVEY_SECRET:'private',SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'server'};
+ let calls=0,accepted=true;
+ const handler=createSurveyCompletionHandler(env,async(url,options)=>{calls++;assert.ok(url.endsWith('/complete_ut_survey'));assert.equal(JSON.parse(options.body).p_stage,1);return Response.json(accepted);});
+ const request=(auth,body)=>new Request('https://test/complete',{method:'POST',headers:{Authorization:`Bearer ${auth}`},body:JSON.stringify(body)});
+ const body={stage:1,code:'10000000-0000-4000-8000-000000000001',responseId:'response'};
+ assert.equal((await handler(request('browser',body))).status,401);assert.equal(calls,0);
+ assert.equal((await handler(request('private',{...body,stage:3}))).status,400);
+ assert.equal((await handler(request('private',body))).status,204);
+ accepted=false;assert.equal((await handler(request('private',body))).status,422);
+ const failing=createSurveyCompletionHandler(env,async()=>{throw new Error('private provider failure');});
+ const failed=await failing(request('private',body));assert.equal(failed.status,502);assert.equal(await failed.text(),'');
+});
 test('second survey waits for the first update, reappears on later due notices, and stops after submission', async () => {
  const owner = crypto.randomUUID(), item = crypto.randomUUID();
  const first = crypto.randomUUID(), next = crypto.randomUUID(), last = crypto.randomUUID();

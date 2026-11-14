@@ -1,5 +1,7 @@
 # 2차 사용성 설문 연결
 
+> 2026-11-14 이후 1·2차 통합 노출·클릭·제출 연결은 [survey-tracking.md](survey-tracking.md)를 따른다. 아래는 이전 2차 전용 연결 방식이다.
+
 1. Supabase에 `202611100001_second_survey.sql`을 적용하고 `ut-second-survey-complete` 함수와 변경된 `email-reminder-worker`를 배포합니다. 새 알림 메일부터 냉장고 링크에 발송 묶음 ID가 포함됩니다.
 2. Google Forms 편집 권한이 있는 팀원이 설문에 필수 단답형 **참여 코드** 항목을 추가합니다. 양식의 미리 채우기 기능으로 링크를 만들어 `entry.숫자` 키를 확인합니다. 이 키를 GitHub Actions 변수 `VITE_UT_SECOND_SURVEY_ENTRY`에 설정하고 웹앱을 빌드합니다. 로컬에서는 같은 이름을 `.env.local`에 설정합니다.
 3. 임의로 생성한 비밀 값을 Supabase Edge Function secret `UT_SECOND_SURVEY_SECRET`과 Google Apps Script의 동일한 이름의 스크립트 속성에 저장합니다. Apps Script 속성 `UT_SECOND_SURVEY_ENDPOINT`에는 배포한 함수 URL을 넣습니다.

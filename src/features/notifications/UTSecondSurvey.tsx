@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { OverlayDialog } from '../../components/OverlayDialog';
 import { supabase } from '../cloud/client';
+import {useSurveyTracking} from './useSurveyTracking';
 import surveyIcon from '../../assets/ut-survey/icon-survey.svg';
 import closeIcon from '../../assets/ut-survey/icon-close.svg';
 import noticeIcon from '../../assets/ut-survey/icon-exclamation.svg';
 
 const surveyUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSd9j2zjGlG1aTxrKXypKnR2ztGbGpqyj1lkR4EE3KqtL7-sQA/viewform';
-const entry = import.meta.env.VITE_UT_SECOND_SURVEY_ENTRY;
+const entry = import.meta.env.VITE_UT_SECOND_SURVEY_ENTRY||'entry.1461618647';
 const validId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const updatedEvent = 'kokjipseo:ingredient-status-updated';
 
@@ -18,8 +19,9 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
   const [preview] = useState(() => import.meta.env.DEV
     ? new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('survey-preview')
     : null);
-  const [invitation, setInvitation] = useState<{ code: string | null; updated: boolean } | null>(() =>
+  const [invitation, setInvitation] = useState<{ code: string | null; updated: boolean; digest?:string } | null>(() =>
     preview === 'updated' || preview === 'followup' ? { code: null, updated: preview === 'updated' } : null);
+  const tracking=useSurveyTracking(2,invitation?.digest??null,!preview);
   useEffect(() => {
     const client = supabase;
     if (!client || preview === 'updated' || preview === 'followup') return;
@@ -46,7 +48,7 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
         sessionStorage.setItem(shownKey, '1');
       } catch { /* Prevent duplicate prompts in memory instead. */ }
       shown.add(currentDigest);
-      setInvitation({ code, updated });
+      setInvitation({ code, updated, digest:currentDigest });
     };
     const refresh = () => { void check().catch(() => {}); };
     const enter = () => {
@@ -78,8 +80,9 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
   if (!invitation) return null;
   const close = () => setInvitation(null);
   const form = new URL(surveyUrl);
-  if (invitation.code && entry && /^entry\.\d+$/.test(entry)) form.searchParams.set(entry, invitation.code);
-  return <OverlayDialog label="콕집서 2차 사용성 설문 안내" onClose={close} dismissOutside={false} className="ut-consent-sheet ut-second-survey">
+  const linked=Boolean(tracking.code&&entry&&/^entry\.\d+$/.test(entry));
+  if (tracking.code && entry && /^entry\.\d+$/.test(entry)) form.searchParams.set(entry, tracking.code);
+  return <OverlayDialog label="콕집서 2차 사용성 설문 안내" onOpen={tracking.onShown} onClose={close} dismissOutside={false} className="ut-consent-sheet ut-second-survey">
     <div className="ut-survey-content" data-figma-node="6941:9521">
       <header className="ut-survey-header">
         <div>
@@ -99,7 +102,7 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
       </div>
     </div>
     <footer className="ut-survey-footer">
-      <a className="action-button ut-survey-cta" href={form.href} target="_blank" rel="noreferrer" onClick={close}>2차 설문 참여하기</a>
+      {linked||preview?<a className="action-button ut-survey-cta" href={form.href} target="_blank" rel="noreferrer" onClick={()=>{tracking.onClick();close();}}>2차 설문 참여하기</a>:<button className="action-button ut-survey-cta" disabled={!tracking.error} onClick={tracking.onShown}>{tracking.error?'설문 연결 다시 시도':'설문 연결 준비 중'}</button>}
       <p>설문 응답은 서비스 개선을 위해 활용됩니다.</p>
     </footer>
   </OverlayDialog>;

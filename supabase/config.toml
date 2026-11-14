@@ -22,3 +22,5 @@ verify_jwt = false
 # Google Forms submit trigger authenticates with a dedicated server secret.
 [functions.ut-second-survey-complete]
 verify_jwt = false
+[functions.ut-survey-complete]
+verify_jwt = false
