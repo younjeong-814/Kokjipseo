@@ -31,7 +31,10 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
     let wasUpdated = false;
     let active = true;
     let request = 0;
-    try { digest = sessionStorage.getItem(storageKey); } catch { /* Keep the current tab in memory. */ }
+    try {
+      digest = sessionStorage.getItem(storageKey);
+      wasUpdated = Boolean(digest && sessionStorage.getItem(`${storageKey}:${digest}:updated`));
+    } catch { /* Keep the current tab in memory. */ }
 
     const check = async () => {
       if (!digest || !validId.test(digest)) return;
@@ -62,7 +65,19 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
       }
       refresh();
     };
-    const update = () => { wasUpdated = true; refresh(); };
+    const update = () => {
+      wasUpdated = true;
+      // A new explicit management action may reopen an unanswered invitation.
+      // Focus/visibility refreshes still do not repeatedly reopen the modal.
+      if (digest) {
+        shown.delete(digest);
+        try {
+          sessionStorage.setItem(`${storageKey}:${digest}:updated`, '1');
+          sessionStorage.removeItem(`${storageKey}:${digest}:shown`);
+        } catch { /* Keep the current tab in memory. */ }
+      }
+      refresh();
+    };
     enter();
     window.addEventListener('hashchange', enter);
     window.addEventListener('focus', refresh);

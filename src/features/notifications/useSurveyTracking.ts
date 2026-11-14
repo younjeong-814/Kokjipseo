@@ -19,7 +19,14 @@ export function useSurveyTracking(stage:1|2,digest:string|null=null,enabled=true
  },[stage,digest,enabled]);
  const onShown=useCallback(()=>{
   if(!enabled||inflight.current)return;
-  inflight.current=record('shown').then(value=>{setCode(value);setError(false);}).catch(()=>setError(true)).finally(()=>{inflight.current=null;});
+  inflight.current=(async()=>{
+   // The registration event can arrive before the ingredient upload finishes.
+   // Retry the same idempotent event; consent and ownership stay server-checked.
+   for(let attempt=0;attempt<3;attempt++){
+    try{const value=await record('shown');setCode(value);setError(false);return;}
+    catch{if(attempt===2)throw new Error('survey_tracking_unavailable');await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)));}
+   }
+  })().catch(()=>setError(true)).finally(()=>{inflight.current=null;});
  },[record,enabled]);
  const onClick=()=>{void record('clicked').catch(()=>{});};
  return {code,error,onShown,onClick};

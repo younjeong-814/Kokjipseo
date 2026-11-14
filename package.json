@@ -8,7 +8,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/ingredients.test.mjs tests/receipt.test.mjs tests/receipt-structure.test.mjs tests/classify.test.mjs tests/recipe.test.mjs tests/recipes.test.mjs tests/recipe-presentation.test.mjs tests/report.test.mjs tests/consume.test.mjs tests/mypage.test.mjs tests/statistics.test.mjs tests/fridge-search.test.mjs tests/cloud.test.mjs tests/email-foundation.test.mjs tests/fridge-notifications.test.mjs tests/manual-reminder-local.test.mjs tests/gmail-reminders.test.mjs",
+    "test": "node --test tests/ingredients.test.mjs tests/receipt.test.mjs tests/receipt-structure.test.mjs tests/classify.test.mjs tests/recipe.test.mjs tests/recipes.test.mjs tests/recipe-presentation.test.mjs tests/report.test.mjs tests/consume.test.mjs tests/mypage.test.mjs tests/statistics.test.mjs tests/fridge-search.test.mjs tests/cloud.test.mjs tests/email-foundation.test.mjs tests/fridge-notifications.test.mjs tests/manual-reminder-local.test.mjs tests/gmail-reminders.test.mjs tests/survey-forms.test.mjs",
     "edge:sync": "node scripts/sync-edge-shared.mjs",
     "edge:check": "node scripts/sync-edge-shared.mjs --check",
     "check:build-secrets": "node scripts/check-build-secrets.mjs",
