@@ -5,26 +5,14 @@ import {UTWelcomeSheet} from './UTWelcomeSheet';
 import {UTSecondSurvey} from './UTSecondSurvey';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenName=/^[a-z0-9-]{1,40}$/;
-const SOURCE_KEY='kokjipseo:entry-source';
+import {captureEntryContext} from './entryContext';
 const appKeys=new Map<string,string>();
 const clickKeys=new Map<string,string>();
 // 모듈 단위로 둬서 개발 모드(StrictMode)의 effect 재실행에도 같은 화면을 두 번 남기지 않는다.
 const lastScreens=new Map<string,string>();
 type UTEventType='app_open'|'notification_click'|'ingredient_view'|'ingredient_manage'|'screen_view';
 /** 첫 진입 경로(?src=pickply, 메일 링크의 source=email)를 이 탭에서 기억한다. 사용자 식별에는 쓰지 않는다. */
-const recruitmentSources=['pickply','instagram','community','platform'] as const;
-type EntrySource=typeof recruitmentSources[number]|'email';
-const isRecruitmentSource=(value:string|null):value is typeof recruitmentSources[number]=>recruitmentSources.some(source=>source===value);
-export function entrySource():EntrySource|null{
-  const search=new URLSearchParams(window.location.search).get('src');
-  const hash=new URLSearchParams(window.location.hash.split('?')[1]??'').get('source');
-  const found=hash==='email'?'email':isRecruitmentSource(search)?search:null;
-  try{
-    if(found)sessionStorage.setItem(SOURCE_KEY,found);
-    const saved=sessionStorage.getItem(SOURCE_KEY);
-    return isRecruitmentSource(saved)||saved==='email'?saved:null;
-  }catch{return found;}
-}
+export function entrySource(){return captureEntryContext().source;}
 export const currentScreen=()=>window.location.hash.slice(1).split('?')[0]||'home';
 export async function recordUTEvent(type:UTEventType,key:string=crypto.randomUUID(),ingredientId?:string,deliveryId?:string,screen?:string){
   if(!supabase)return;
@@ -40,13 +28,15 @@ export async function recordManagedActivity(userId:string,activity:{id:string;it
 /** Optional UT tracking cannot block or modify fridge CRUD. No collection before DB consent. */
 export function UTTracker({userId,initialIngredientCount}:{userId:string;initialIngredientCount:number}){
   useEffect(()=>{
-    if(!appKeys.has(userId))appKeys.set(userId,crypto.randomUUID());
     entrySource();
     const report=(event?:Event)=>{
       const query=new URLSearchParams(window.location.hash.split('?')[1]??'');
       const item=query.get('item'),delivery=query.get('delivery')??new URLSearchParams(window.location.search).get('delivery');
       const consentChanged=event?.type==='kokjipseo:notification-preferences-changed';
-      void recordUTEvent('app_open',appKeys.get(userId)).catch(()=>{});
+      const context=captureEntryContext();
+      const visitKey=`${userId}:${context.source??''}:${context.digest??''}`;
+      if(!appKeys.has(visitKey))appKeys.set(visitKey,crypto.randomUUID());
+      void recordUTEvent('app_open',appKeys.get(visitKey)).catch(()=>{});
       const screen=currentScreen();
       // 같은 화면을 반복 기록하지 않는다. 동의 직후에는 현재 화면을 다시 기록한다.
       if(screenName.test(screen)&&(lastScreens.get(userId)!==screen||consentChanged)){lastScreens.set(userId,screen);void recordUTEvent('screen_view',crypto.randomUUID(),undefined,undefined,screen).catch(()=>{});}

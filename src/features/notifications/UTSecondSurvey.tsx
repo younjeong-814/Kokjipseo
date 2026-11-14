@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { OverlayDialog } from '../../components/OverlayDialog';
 import { supabase } from '../cloud/client';
 import {useSurveyTracking} from './useSurveyTracking';
+import {captureEntryContext} from './entryContext';
 import surveyIcon from '../../assets/ut-survey/icon-survey.svg';
 import closeIcon from '../../assets/ut-survey/icon-close.svg';
 import noticeIcon from '../../assets/ut-survey/icon-exclamation.svg';
@@ -55,9 +56,9 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
     };
     const refresh = () => { void check().catch(() => {}); };
     const enter = () => {
-      const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-      const next = params.get('digest');
-      if (params.get('source') === 'email' && next && validId.test(next) && next !== digest) {
+      const context = captureEntryContext();
+      const next = context.digest;
+      if (context.source === 'email' && next && validId.test(next) && next !== digest) {
         digest = next;
         wasUpdated = false;
         setInvitation(null);
