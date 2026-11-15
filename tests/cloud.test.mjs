@@ -13,6 +13,42 @@ const {ensureAnonymousSession}=load('../src/features/cloud/anonymous.ts');
 const {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS}=load('../src/features/notifications/verificationInput.ts');
 const {createEntryContext}=load('../src/features/notifications/entryContext.ts');
 
+test('second survey does not prompt on email arrival or old update flags; current update unlocks it',async()=>{
+ const digest='7c6a488f-eaae-4f30-9131-37404c3ddf11';
+ const values=new Map([['kokjipseo:second-survey-digest:owner',digest],
+  [`kokjipseo:second-survey-digest:owner:${digest}:updated`,'1']]);
+ const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ const previous={window:globalThis.window,document:globalThis.document,sessionStorage:globalThis.sessionStorage};
+ const target=new EventTarget(), doc=new EventTarget();
+ globalThis.window=target;globalThis.document=doc;globalThis.sessionStorage=storage;
+ let effect,cleanup,calls=0,invites=[];
+ const source=readFileSync(new URL('../src/features/notifications/UTSecondSurvey.tsx',import.meta.url),'utf8')
+  .replaceAll('import.meta.env.DEV','false').replaceAll('import.meta.env.VITE_UT_SECOND_SURVEY_ENTRY','undefined');
+ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const exports={};
+ const mocks={
+  react:{useEffect:fn=>{effect=fn;},useState:init=>[typeof init==='function'?init():init,value=>{if(value)invites.push(value);} ]},
+  '../cloud/client':{supabase:{rpc:async(_name,args)=>{calls++;assert.equal(args.p_updated,true);return {data:'participation-code',error:null};}}},
+  './entryContext':{captureEntryContext:()=>({source:'email',digest})},
+  './useSurveyTracking':{useSurveyTracking:()=>({})},
+ };
+ const flush=()=>new Promise(resolve=>setImmediate(resolve));
+ try{
+  new Function('exports','require',code)(exports,path=>mocks[path]??{});
+  exports.UTSecondSurvey({userId:'owner'});cleanup=effect();
+  target.dispatchEvent(new Event('focus'));target.dispatchEvent(new Event('hashchange'));doc.dispatchEvent(new Event('visibilitychange'));
+  await flush();assert.equal(calls,0);assert.equal(invites.length,0);
+  target.dispatchEvent(new Event('kokjipseo:ingredient-status-updated'));await flush();
+  assert.equal(calls,1);assert.equal(invites.length,1);assert.equal(invites[0].updated,true);
+  cleanup();
+  // Reload/re-entry must require a new update even if the old persistent flag remains.
+  exports.UTSecondSurvey({userId:'owner'});cleanup=effect();await flush();assert.equal(calls,1);
+ }finally{
+  cleanup?.();
+  for(const [key,value] of Object.entries(previous)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}
+ }
+});
+
 test('email entry survives old campaign params, route changes, late survey mount and reload',()=>{
  const values=new Map([['kokjipseo:entry-source','instagram']]);
  const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
