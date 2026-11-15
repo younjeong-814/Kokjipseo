@@ -34,11 +34,12 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
     let request = 0;
     try {
       digest = sessionStorage.getItem(storageKey);
-      wasUpdated = Boolean(digest && sessionStorage.getItem(`${storageKey}:${digest}:updated`));
     } catch { /* Keep the current tab in memory. */ }
 
     const check = async () => {
-      if (!digest || !validId.test(digest)) return;
+      // Never prompt on entry/focus alone, including D-1/today follow-ups.
+      // A previous visit's saved update flag must not unlock this visit.
+      if (!wasUpdated || !digest || !validId.test(digest)) return;
       const currentDigest = digest;
       const currentRequest = ++request;
       const updated = wasUpdated;
@@ -73,7 +74,6 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
       if (digest) {
         shown.delete(digest);
         try {
-          sessionStorage.setItem(`${storageKey}:${digest}:updated`, '1');
           sessionStorage.removeItem(`${storageKey}:${digest}:shown`);
         } catch { /* Keep the current tab in memory. */ }
       }
