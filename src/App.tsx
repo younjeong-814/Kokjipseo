@@ -175,7 +175,7 @@ export function App({ firstUseGuidePending = false, onFirstUseGuideComplete = ()
     // 국·찌개·밀키트 같은 음식은 냉장고 음식 탭에 들어간다. 모두 음식이면 음식 탭을 연다.
     const foods = drafts.filter(isFood).length;
     const ingredientsCount = drafts.length - foods;
-    const firstIngredientRegistration = ingredientItems.length===0 && ingredientsCount>0;
+    const firstIngredientRegistration = drafts.length>0;
     const message = [ingredientsCount && `식재료 ${ingredientsCount}개`, foods && `음식 ${foods}개`].filter(Boolean).join(', ');
     try { registering.current = true; ingredients.saveRecognized(drafts); if(firstIngredientRegistration)window.dispatchEvent(new Event('kokjipseo:first-ingredient-registered')); setRegistrationMessage(`${message}를 등록했어요`); navigate(ingredientsCount ? 'fridge-registered' : 'fridge-food'); }
     catch (failure) { registering.current = false; setRecognitionError(failure instanceof Error ? failure.message : '저장하지 못했어요.'); }
@@ -226,7 +226,7 @@ export function App({ firstUseGuidePending = false, onFirstUseGuideComplete = ()
   }
   if (screen === 'manual-entry') {
     return <div className="app-shell"><ManualEntryPage key={editingIngredient?.id ?? 'new'} navigate={navigate} initial={editingIngredient} onCancel={editingFromDetail && editingIngredient ? () => openDetail(editingIngredient) : manualFromFailure && !editingIngredient ? () => window.history.back() : undefined} onSave={(draft, id) => {
-      const firstIngredientRegistration = !id && ingredientItems.length===0 && !isFood(draft);
+      const firstIngredientRegistration = !id;
       ingredients.save(draft, id);
       if(firstIngredientRegistration)window.dispatchEvent(new Event('kokjipseo:first-ingredient-registered'));
       const noun = isFood(draft) ? '음식' : '식재료';

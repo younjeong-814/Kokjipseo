@@ -265,7 +265,7 @@ function SignedInStorage({session,children}:{session:Session;children:ReactNode}
       {backupNotice&&<p role="alert">{backupNotice}</p>}
     </div></AccountBar>}>
     {children}
-    <UTTracker userId={session.user.id} initialIngredientCount={storage.snapshot().ingredients.filter(item=>!isFood(item as Ingredient)).length}/>
+    <UTTracker userId={session.user.id} initialIngredientCount={storage.snapshot().ingredients.length}/>
     {error&&<aside className="cloud-save-warning" role="alert">{error}<button onClick={()=>{setBackupNotice('');void backup().catch(backupFailed);}}>기록 백업</button>{backupNotice&&<p>{backupNotice}</p>}</aside>}
     </AccountContext.Provider>
     </FirstUseEligibilityContext.Provider>

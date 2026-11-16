@@ -94,6 +94,7 @@ before(async()=>{
  await db.query('insert into auth.users values($1),($2)',[a,b]);
  await db.exec(readFileSync(new URL('../supabase/migrations/202611100001_second_survey.sql',import.meta.url),'utf8'));
  await db.exec(readFileSync(new URL('../supabase/migrations/202611140001_survey_tracking.sql',import.meta.url),'utf8'));
+ await db.exec(readFileSync(new URL('../supabase/migrations/202611160001_first_survey_all_registrations.sql',import.meta.url),'utf8'));
 });
 after(()=>db.close());
 async function asUser(id,fn){await db.exec('set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);try{return await fn();}finally{await db.exec('reset role');}}
@@ -131,6 +132,20 @@ test('survey exposure and clicks are owner-scoped, consent gated and idempotent;
   await db.query("update public.ut_participants set status='withdrawn' where user_id=$1",[owner]);
   assert.equal(await asUser(owner,()=>event(1,'shown')),null);
   assert.equal((await db.query('select public.complete_ut_survey(1,$1,$2) as ok',[code,'response-withdrawn'])).rows[0].ok,false);
+ }finally{await db.exec('rollback');}
+});
+
+test('food-only registration receives a first-survey code with consent and owner checks intact',async()=>{
+ await db.exec('begin');try{
+  const owner=crypto.randomUUID(),other=crypto.randomUUID(),item=crypto.randomUUID();
+  await db.query('insert into auth.users values($1),($2)',[owner,other]);
+  await db.query("insert into public.ingredients(id,user_id,name,category,payload) values($1::uuid,$2::uuid,'QA 밀키트','밀키트',jsonb_build_object('id',$1::text,'name','QA 밀키트','category','밀키트','kind','food'))",[item,owner]);
+  const shown=()=>db.query("select public.record_ut_survey_event(1,'shown',$1,null,'platform') as code",[crypto.randomUUID()]);
+  assert.equal((await asUser(owner,shown)).rows[0].code,null);
+  await db.query('insert into public.ut_participants(user_id) values($1),($2)',[owner,other]);
+  assert.equal((await asUser(other,shown)).rows[0].code,null);
+  const code=(await asUser(owner,shown)).rows[0].code;assert.ok(code);
+  assert.equal((await db.query('select user_id from public.ut_survey_links where participation_code=$1',[code])).rows[0].user_id,owner);
  }finally{await db.exec('rollback');}
 });
 
