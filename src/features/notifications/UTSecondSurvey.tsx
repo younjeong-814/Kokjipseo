@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { OverlayDialog } from '../../components/OverlayDialog';
 import { supabase } from '../cloud/client';
 import {useSurveyTracking} from './useSurveyTracking';
+import {captureEntryContext} from './entryContext';
 import surveyIcon from '../../assets/ut-survey/icon-survey.svg';
 import closeIcon from '../../assets/ut-survey/icon-close.svg';
 import noticeIcon from '../../assets/ut-survey/icon-exclamation.svg';
@@ -33,11 +34,12 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
     let request = 0;
     try {
       digest = sessionStorage.getItem(storageKey);
-      wasUpdated = Boolean(digest && sessionStorage.getItem(`${storageKey}:${digest}:updated`));
     } catch { /* Keep the current tab in memory. */ }
 
     const check = async () => {
-      if (!digest || !validId.test(digest)) return;
+      // Never prompt on entry/focus alone, including D-1/today follow-ups.
+      // A previous visit's saved update flag must not unlock this visit.
+      if (!wasUpdated || !digest || !validId.test(digest)) return;
       const currentDigest = digest;
       const currentRequest = ++request;
       const updated = wasUpdated;
@@ -55,9 +57,9 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
     };
     const refresh = () => { void check().catch(() => {}); };
     const enter = () => {
-      const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-      const next = params.get('digest');
-      if (params.get('source') === 'email' && next && validId.test(next) && next !== digest) {
+      const context = captureEntryContext();
+      const next = context.digest;
+      if (context.source === 'email' && next && validId.test(next) && next !== digest) {
         digest = next;
         wasUpdated = false;
         setInvitation(null);
@@ -72,7 +74,6 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
       if (digest) {
         shown.delete(digest);
         try {
-          sessionStorage.setItem(`${storageKey}:${digest}:updated`, '1');
           sessionStorage.removeItem(`${storageKey}:${digest}:shown`);
         } catch { /* Keep the current tab in memory. */ }
       }

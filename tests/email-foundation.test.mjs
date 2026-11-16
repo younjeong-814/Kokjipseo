@@ -179,6 +179,10 @@ test('second survey waits for the first update, reappears on later due notices, 
   }
   const code = await asUser(owner,async () => {
    assert.equal(await invite(first,false),null);
+   // Ignoring D-3 must not prevent participating after an update on D-1/today.
+   const afterLaterUpdate = await invite(next,true);
+   assert.ok(afterLaterUpdate);
+   assert.equal(await invite(last,true),afterLaterUpdate);
    assert.ok(await invite(next,false));
    const afterUpdate = await invite(first,true);
    assert.equal(await invite(last,false),afterUpdate);
