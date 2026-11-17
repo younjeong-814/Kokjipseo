@@ -13,6 +13,27 @@ const {ensureAnonymousSession}=load('../src/features/cloud/anonymous.ts');
 const {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS}=load('../src/features/notifications/verificationInput.ts');
 const {createEntryContext}=load('../src/features/notifications/entryContext.ts');
 
+test('platform first survey stays hidden on registration and pending reload; other campaign surveys remain enabled',()=>{
+ const previous={window:globalThis.window,localStorage:globalThis.localStorage};
+ const source=readFileSync(new URL('../src/features/notifications/UTConsentSheet.tsx',import.meta.url),'utf8').replaceAll('import.meta.env.VITE_UT_FIRST_SURVEY_ENTRY','undefined');
+ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ try{
+  for(const channel of ['platform','instagram','community','pickply','email',null])for(const count of [0,1]){
+   let effect,opens=0,tracking;
+   const values=new Map([['kokjipseo:ut-survey-pending:owner','1']]);
+   const target=new EventTarget();globalThis.window=target;
+   globalThis.localStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+   const api={};const mocks={react:{useEffect:fn=>{effect=fn;},useState:()=>[false,value=>{if(value)opens++;}]},'../cloud/client':{supabase:{}},'./UTTracker':{entrySource:()=>channel},'./useSurveyTracking':{useSurveyTracking:(_stage,_digest,enabled=true)=>{tracking=enabled;return {};}}};
+   new Function('exports','require',code)(api,path=>mocks[path]??{});
+   api.UTConsentSheet({userId:'owner',initialIngredientCount:count});const cleanup=effect();
+   target.dispatchEvent(new Event('kokjipseo:first-ingredient-registered'));
+   assert.equal(opens,channel==='platform'||channel==='email'?0:1,`${channel}, count=${count}`);
+   if(channel==='platform'){assert.equal(tracking,false);assert.equal(values.size,1,'platform must not write first-survey flags');}
+   cleanup?.();
+  }
+ }finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
+});
+
 test('second survey does not prompt on email arrival or old update flags; current update unlocks it',async()=>{
  const digest='7c6a488f-eaae-4f30-9131-37404c3ddf11';
  const values=new Map([['kokjipseo:second-survey-digest:owner',digest],

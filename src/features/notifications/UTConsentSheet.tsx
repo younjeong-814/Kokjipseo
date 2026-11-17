@@ -12,13 +12,15 @@ const SURVEY_URL='https://docs.google.com/forms/d/e/1FAIpQLSdnLd4D7twDKh2W2oBpA3
 /** 식재료와 음식 모두 신규 등록 후 계정별 최초 1차 설문을 안내한다. */
 export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;initialIngredientCount:number}){
   const [open,setOpen]=useState(false);
-  const tracking=useSurveyTracking(1);
+  const platform=entrySource()==='platform';
+  const tracking=useSurveyTracking(1,null,!platform);
   const form=new URL(SURVEY_URL);
   const entry=import.meta.env.VITE_UT_FIRST_SURVEY_ENTRY||'entry.443967875';
   if(tracking.code&&entry&&/^entry\.\d+$/.test(entry))form.searchParams.set(entry,tracking.code);
   const linked=Boolean(tracking.code&&entry&&/^entry\.\d+$/.test(entry));
   useEffect(()=>{
-    if(!supabase)return;
+    // Platform testers answer the platform's own form instead of our first survey.
+    if(!supabase||platform)return;
     const firstVisitKey=`kokjipseo:ut-survey-first-visit:${userId}`;
     const pendingKey=`kokjipseo:ut-survey-pending:${userId}`;
     const shownKey=`kokjipseo:ut-survey-shown:${userId}`;
@@ -31,7 +33,7 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
       }
     }catch{/* 저장소를 사용할 수 없으면 현재 방문에서만 처리한다. */}
     const showAfterFirstRegistration=(newRegistration=false)=>{
-      if(!live||shown||entrySource()==='email')return;
+      if(!live||shown||['email','platform'].includes(entrySource()??''))return;
       let eligible=false;
       try{eligible=localStorage.getItem(pendingKey)==='1';}catch{eligible=initialIngredientCount===0;}
       if(!eligible&&!newRegistration)return;
@@ -46,8 +48,8 @@ export function UTConsentSheet({userId,initialIngredientCount}:{userId:string;in
     // 등록 직후 새로고침된 경우에도 대기 중이던 표시를 이어간다.
     if(initialIngredientCount>0)void showAfterFirstRegistration();
     return()=>{live=false;window.removeEventListener('kokjipseo:first-ingredient-registered',registered);};
-  },[userId]);
-  if(!open)return null;
+  },[userId,platform]);
+  if(!open||platform)return null;
   return <OverlayDialog label="콕집서 1차 사용성 설문 안내" onOpen={()=>{try{localStorage.setItem(`kokjipseo:ut-survey-shown:${userId}`,'1');localStorage.removeItem(`kokjipseo:ut-survey-pending:${userId}`);}catch{/* Memory guard remains active. */}tracking.onShown();}} onClose={()=>setOpen(false)} dismissOutside={false} className="ut-consent-sheet">
     <div className="ut-survey-content">
       <header className="ut-survey-header">
