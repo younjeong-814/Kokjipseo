@@ -27,7 +27,7 @@ test('platform first survey stays hidden on registration and pending reload; oth
    new Function('exports','require',code)(api,path=>mocks[path]??{});
    api.UTConsentSheet({userId:'owner',initialIngredientCount:count});const cleanup=effect();
    target.dispatchEvent(new Event('kokjipseo:first-ingredient-registered'));
-   assert.equal(opens,channel==='platform'||channel==='email'?0:1,`${channel}, count=${count}`);
+   assert.equal(opens,['instagram','community','pickply'].includes(channel)?1:0,`${channel}, count=${count}`);
    if(channel==='platform'){assert.equal(tracking,false);assert.equal(values.size,1,'platform must not write first-survey flags');}
    cleanup?.();
   }
@@ -79,6 +79,15 @@ test('email entry survives old campaign params, route changes, late survey mount
  assert.deepEqual(context.capture('?src=instagram','#ingredient-detail?item=123'),{source:'email',digest});
  assert.deepEqual(context.capture('?src=instagram','#fridge'),{source:'email',digest});
  assert.deepEqual(createEntryContext(storage).capture('?src=instagram','#fridge',true),{source:'email',digest});
+});
+
+test('public entry clears previous campaign and email context',()=>{
+ for(const source of ['instagram','community','platform','email']){
+  const values=new Map([['kokjipseo:entry-source',source],['kokjipseo:entry-email-digest','7c6a488f-eaae-4f30-9131-37404c3ddf11']]);
+  const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+  assert.deepEqual(createEntryContext(storage).capture('','#home',true),{source:null,digest:null});
+  assert.equal(values.size,0);
+ }
 });
 
 test('fresh campaign attribution is preserved and malformed digest is not accepted',()=>{

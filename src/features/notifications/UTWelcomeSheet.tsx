@@ -13,7 +13,7 @@ export function UTWelcomeSheet({userId}:{userId:string}){
   const working=useRef(false);
   useEffect(()=>{
     const source=entrySource();
-    if(!supabase||guidePending||source==='email'||(!welcomeRequested&&!['pickply','instagram','community','platform'].includes(source??'')))return;
+    if(!supabase||guidePending||!['pickply','instagram','community','platform'].includes(source??''))return;
     let live=true;
     void(async()=>{
       const result=await supabase!.from('ut_participants').select('status').eq('user_id',userId).maybeSingle();

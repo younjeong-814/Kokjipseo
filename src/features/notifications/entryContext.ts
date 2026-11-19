@@ -18,6 +18,11 @@ export function createEntryContext(storage: Pick<Storage, 'getItem' | 'setItem' 
   return { capture(search: string, hash: string, initial = false) {
     const params = new URLSearchParams(hash.split('?')[1] ?? '');
     const campaign = new URLSearchParams(search).get('src');
+    // Public entry must not inherit an earlier tester session in the same tab.
+    if (initial && !validSource(campaign) && params.get('source') !== 'email') {
+      source = null;
+      digest = null;
+    }
     if (params.get('source') === 'email') {
       source = 'email';
       const next = params.get('digest');
@@ -28,6 +33,7 @@ export function createEntryContext(storage: Pick<Storage, 'getItem' | 'setItem' 
     }
     try {
       if (source) storage.setItem(sourceKey, source);
+      else storage.removeItem(sourceKey);
       if (digest) storage.setItem(digestKey, digest);
       else storage.removeItem(digestKey);
     } catch { /* Preserve context in memory. */ }

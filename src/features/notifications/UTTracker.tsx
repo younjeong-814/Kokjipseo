@@ -15,7 +15,7 @@ type UTEventType='app_open'|'notification_click'|'ingredient_view'|'ingredient_m
 export function entrySource(){return captureEntryContext().source;}
 export const currentScreen=()=>window.location.hash.slice(1).split('?')[0]||'home';
 export async function recordUTEvent(type:UTEventType,key:string=crypto.randomUUID(),ingredientId?:string,deliveryId?:string,screen?:string){
-  if(!supabase)return;
+  if(!supabase||!entrySource())return;
   // Database checks active UT consent, owner, delivery status and idempotency.
   await supabase.rpc('record_ut_event',{p_event_key:key,p_event_type:type,p_ingredient_id:ingredientId??null,p_delivery_id:deliveryId??null,p_screen:screen??null,p_source:entrySource()});
 }
@@ -50,5 +50,6 @@ export function UTTracker({userId,initialIngredientCount}:{userId:string;initial
     report();window.addEventListener('hashchange',report);window.addEventListener('kokjipseo:notification-preferences-changed',report);
     return()=>{window.removeEventListener('hashchange',report);window.removeEventListener('kokjipseo:notification-preferences-changed',report);};
   },[userId]);
+  if(!entrySource())return null;
   return <><UTWelcomeSheet key={`welcome:${userId}`} userId={userId}/><UTConsentSheet key={`survey:${userId}`} userId={userId} initialIngredientCount={initialIngredientCount}/><UTSecondSurvey key={userId} userId={userId}/></>;
 }
