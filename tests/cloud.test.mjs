@@ -279,3 +279,18 @@ test('Gemini photo request lowers thinking by model and retries without it when 
  await recognizePhoto('K','gemini-3.6-flash','/9j/AAAA','product',async(url,init)=>{bodies.push(JSON.parse(init.body).generationConfig);return bodies.length===1?new Response('',{status:400}):ok()});
  assert.equal(bodies.length,2);assert.deepEqual(bodies[0].thinkingConfig,{thinkingLevel:'minimal'});assert.equal(bodies[1].thinkingConfig,undefined);
 });
+
+test('Gemini photo fallback shares the deadline and reports a timeout',async()=>{
+ const signals=[];
+ const fetcher=async (_url,init)=>{
+  signals.push(init.signal);
+  if(signals.length===1)return new Response('',{status:400});
+  throw new DOMException('Timed out','TimeoutError');
+ };
+ await assert.rejects(
+  ()=>recognizePhoto('K','gemini-3.6-flash','/9j/AAAA','product',fetcher),
+  error=>error.status===504 && error.message.includes('너무 오래')
+ );
+ assert.equal(signals.length,2);
+ assert.equal(signals[0],signals[1]);
+});
