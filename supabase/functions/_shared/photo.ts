@@ -16,7 +16,8 @@ export function thinkingConfig(model:string):Record<string,unknown>|undefined{
 export async function recognizePhoto(key:string,model:string,image:string,mode:string,fetcher:typeof fetch=fetch):Promise<PhotoItem[]>{
   if(!/^gemini-[a-zA-Z0-9.-]+$/.test(model))throw new HttpError(503,'서버의 GEMINI_MODEL 설정을 확인해 주세요.');
   const thinking=thinkingConfig(model);
-  const signal=AbortSignal.timeout(45000);
+  // Leave room for authentication and response handling within the 150s Edge limit.
+  const signal=AbortSignal.timeout(120000);
   const request=(withThinking:boolean)=>fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
     method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},signal,
     body:JSON.stringify({contents:[{parts:[{text:`${mode==='fridge'?'냉장고 칸':'상품'} 사진에서 실제로 보이는 먹을 수 있는 식재료와 음식을 한국어로 나열하세요. 포장·물건·배경은 제외하세요. 보이지 않는 식재료나 신선도·소비기한은 추측하지 마세요. 같은 식재료는 합치고 개수가 불명확하면 quantity는 1, uncertain은 true로 하세요. 빈 사진이나 식품이 없으면 items는 빈 배열입니다. category는 지정된 분류만 사용하세요.`},{inlineData:{mimeType:'image/jpeg',data:image}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{items:{type:'array',maxItems:30,items:{type:'object',properties:{name:{type:'string'},category:{type:'string',enum:categories},quantity:{type:'integer'},uncertain:{type:'boolean'}},required:['name','category','quantity','uncertain'],additionalProperties:false}}},required:['items'],additionalProperties:false},...(withThinking&&thinking?{thinkingConfig:thinking}:{})}}),
