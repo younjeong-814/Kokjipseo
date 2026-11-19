@@ -3,8 +3,8 @@ export type FridgeSort = typeof sortLabels[number];
 export type SortDirection = 'asc' | 'desc';
 // sort가 null이면 아무 필터도 고르지 않은 처음 상태다. 목록은 저장된 순서(최근 등록이 위)를 그대로 쓴다.
 export type SortState = { sort: FridgeSort | null; direction: SortDirection };
-// 필터를 처음 누르면 내림차순, 다시 누르면 오름차순이다.
-export const defaultDirection = (_sort: FridgeSort | null): SortDirection => 'desc';
+// 소비기한은 가까운 날짜부터, 등록순과 남은양순은 내림차순부터 표시한다.
+export const defaultDirection = (sort: FridgeSort | null): SortDirection => sort === '소비기한' ? 'asc' : 'desc';
 export function nextSort(state: SortState, sort: FridgeSort): SortState {
   return { sort, direction: state.sort === sort ? state.direction === 'asc' ? 'desc' : 'asc' : defaultDirection(sort) };
 }
