@@ -17,6 +17,12 @@ const expiry = load('../src/features/ingredients/expiry.ts');
 
 // 상품명 → 기대 카테고리. 틀리는 사례를 찾으면 여기에 한 줄 추가하고 classify.ts 사전을 고친다.
 const cases = [
+  // Figma 영수증 오류 사례: 맛·브랜드를 원재료로 오분류하지 않는다.
+  ['짜요 딸기 카톤', '유제품'], ['짜요 복숭아 카톤', '유제품'],
+  ['짜요짜요 딸기 6입', '유제품'], ['오리온 오 그래 놀라', '기타 음식'],
+  ['오리온 오!그래놀라(미쯔스모어) 215g', '기타 음식'],
+  ['앵그리너구리', '가공식품'], ['농심 짜파게티', '가공식품'],
+  ['짜요 딸기 케이크', '기타 음식'], ['오리고기', '육류'],
   // 기본
   ['대파', '채소'], ['양파', '채소'], ['국산 깐마늘', '채소'], ['특등급 국산콩 콩나물', '채소'],
   ['햇사과 홍로', '과일'], ['단감', '과일'], ['배', '과일'], ['샤인머스캣', '과일'],
@@ -56,6 +62,13 @@ const cases = [
   // 규칙 5: 모르면 기타 음식
   ['키친타월', '기타 음식'], ['', '기타 음식'], ['잡채', '기타 음식'],
 ];
+
+test('receipt cosmetics are excluded without excluding food sold in the same store', () => {
+  assert.equal(isExcludedItem('에뛰드 클라우드 필터 쿠션'), true);
+  assert.equal(isExcludedItem('쿠션 파운데이션'), true);
+  assert.equal(isExcludedItem('애사비오리지널'), false);
+  assert.equal(isExcludedItem('닭가슴살 단호박 샐러드'), false);
+});
 
 for (const [name, expected] of cases) {
   test(`${name || '(빈 이름)'} → ${expected}`, () => assert.equal(classifyIngredient(name), expected));

@@ -27,7 +27,7 @@ const dictionary: Record<string, string[]> = {
     '원두', '찻잎', '녹차', '홍차', '보리차', '티백', '가루', '밀가루', '부침가루', '튀김가루', '빵가루', '전분', '녹말', '이스트', '효모', '베이킹파우더', '베이킹소다'],
   // 공장에서 가공한 식품: 육가공·어묵·통조림·면·냉동·즉석식품
   '가공식품': ['햄', '소시지', '스팸', '베이컨', '어묵', '맛살', '크래미', '통조림', '참치캔', '면', '국수', '소면', '당면', '우동', '파스타', '스파게티',
-    '라면', '컵라면', '냉면', '만두', '교자', '너겟', '돈까스', '까스', '튀김', '볶음밥', '냉동피자', '냉동치킨', '핫도그', '치즈스틱', '즉석밥', '햇반', '컵밥', '죽', '카레', '짜장'],
+    '라면', '짜파게티', '너구리', '컵라면', '냉면', '만두', '교자', '너겟', '돈까스', '까스', '튀김', '볶음밥', '냉동피자', '냉동치킨', '핫도그', '치즈스틱', '즉석밥', '햇반', '컵밥', '죽', '카레', '짜장'],
   '반찬': ['김치', '김', '조미김', '묵', '단무지', '장아찌', '피클', '젓갈', '볶음', '조림', '무침', '구이', '반찬'],
   // 김치찌개의 핵심 명사는 '김치'가 아니라 '찌개'다.
   '국·찌개': ['찌개', '국', '탕', '전골', '짜글이', '국밥', '수제비'],
@@ -67,6 +67,7 @@ const COOKING_ALCOHOL = ['맛술', '미림', '요리술', '요리용', '식초',
 /** 식재료로 등록하지 않을 품목인지. 영수증 인식 결과에서 걸러낼 때 쓴다. */
 export function isExcludedItem(name: string): boolean {
   const text = name.toLowerCase();
+  if (/필터\s*쿠션|쿠션\s*(?:파운데이션|팩트)|에뛰드.*쿠션/.test(text)) return true;
   const words = text.split(/\s+/);
   if (NON_FOOD.some(keyword => text.includes(keyword)) || words.some(word => NON_FOOD_WORDS.includes(word))) return true;
   if (COOKING_ALCOHOL.some(keyword => text.includes(keyword))) return false;
@@ -81,6 +82,11 @@ const EXTRACT_SOURCES = ['수산물', '육류', '채소', '과일'];
 
 /** 이름에서 규칙상 이기는 키워드와 그 카테고리. 소비권장일 DB를 찾을 때도 이 키워드를 쓴다. */
 export function matchIngredient(name: string): { keyword: string; category: string } | undefined {
+  // OCR의 띄어쓰기와 브랜드 안의 원재료 이름 때문에 상품 정체가 바뀌는 실제 사례.
+  // 다른 음식(짜요 딸기 케이크 등)까지 덮어쓰지 않도록 상품 전체 형태만 인정한다.
+  const product = name.toLowerCase().replace(/[\s!]/g, '');
+  if (/^(?:서울우유)?짜요(?:짜요)?(?:딸기|복숭아)(?:카톤)?(?:\d+입)?$/.test(product)) return { keyword: '요구르트', category: '유제품' };
+  if (/^(?:오리온)?(?:오)?(?:그래놀라|그라놀라)(?:\([^)]*\))?(?:\d+g)?$/.test(product)) return { keyword: '시리얼', category: '기타 음식' };
   const text = name.toLowerCase();
   let best: { end: number; length: number; keyword: string; category: string } | undefined;
   for (const { category, keyword } of entries) {
