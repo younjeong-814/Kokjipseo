@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { OverlayDialog } from '../../components/OverlayDialog';
 import { ActionButton } from '../../components/ActionButton';
 import { asset } from '../../lib/assets';
-import { ingredientImage } from '../ingredients/IngredientCard';
+import { IngredientThumbnail } from '../ingredients/IngredientThumbnail';
 import { deadlineLabel } from '../ingredients/expiry';
 import type { Ingredient } from '../ingredients/repository';
 
@@ -26,7 +26,7 @@ export function ExpiringIngredientsModal({ entries, onOpenFridge }: { entries: E
         <button type="button" className="expiring-modal-close" aria-label="닫기" onClick={close}><img src={asset('manual-close.svg')} alt="" /></button>
       </header>
       <ul className="expiring-modal-list">{entries.map(({ item, days }) => <li key={item.id}>
-        <img className="expiring-modal-thumb" src={asset(ingredientImage(item))} alt="" />
+        <IngredientThumbnail className="expiring-modal-thumb" item={item} />
         <span className="expiring-modal-name"><strong title={item.name}>{item.name}</strong><span>{item.storage}</span></span>
         <span className={`expiring-modal-dday${days <= 0 ? ' expired' : ''}`}>{days < 0 ? '기한경과' : deadlineLabel(days)}</span>
       </li>)}</ul>

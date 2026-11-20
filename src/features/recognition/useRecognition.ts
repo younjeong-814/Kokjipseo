@@ -1,10 +1,9 @@
 import type { PhotoRecognitionItem } from './photoApi';
 import { useState } from 'react';
 import type { ReceiptResult } from '../receipt/parseReceipt';
-import { categoryImage } from '../ingredients/images';
 import { classifyIngredient, matchIngredient } from '../ingredients/classify';
 
-export type RecognizedItem = { id: number; name: string; quantity: number; category: string; image: string; error: boolean; corrected: boolean };
+export type RecognizedItem = { id: number; name: string; quantity: number; category: string; error: boolean; corrected: boolean };
 
 const pad = (value: number) => String(value).padStart(2, '0');
 const now = () => {
@@ -37,7 +36,7 @@ export function useRecognition() {
       if (!name) return;
       // 이름이 바뀌면 카테고리와 썸네일도 다시 정한다.
       const category = classifyIngredient(name);
-      setItems(current => current.map(item => item.id === id ? { ...item, name, category, image: categoryImage(category), corrected: true } : item));
+      setItems(current => current.map(item => item.id === id ? { ...item, name, category, corrected: true } : item));
       setPendingName(name);
     },
     remove: (id: number) => setItems(current => current.filter(item => item.id !== id)),
@@ -45,20 +44,20 @@ export function useRecognition() {
     showDetected: (names: (string | PhotoRecognitionItem)[]) => {
       setSource('camera');
       start(names.map((value, id) => {
-        if (typeof value !== 'string') return {...value,id,quantity:1,image:categoryImage(value.category),error:!matchIngredient(value.name),corrected:false};
+        if (typeof value !== 'string') return {...value,id,quantity:1,error:!matchIngredient(value.name),corrected:false};
         const name = value;
         const category = classifyIngredient(name);
-        return { id, name, quantity: 1, category, image: categoryImage(category), error: !matchIngredient(name), corrected: false };
+        return { id, name, quantity: 1, category, error: !matchIngredient(name), corrected: false };
       }), now());
     },
-    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,id,quantity:1,image:categoryImage(item.category),error:!matchIngredient(item.name),corrected:false})),now());},
+    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,id,quantity:1,error:!matchIngredient(item.name),corrected:false})),now());},
     showReceipt: (result: ReceiptResult) => {
       const at = now();
       setSource('receipt');
       start(result.items.map((item, id) => {
         const category = classifyIngredient(item.name);
         // 사전에 없는 이름은 오인식일 수 있으니 확인하도록 표시한다.
-        return { id, name: item.name, quantity: item.quantity, category, image: categoryImage(category), error: item.suspicious || !matchIngredient(item.name), corrected: false };
+        return { id, name: item.name, quantity: item.quantity, category, error: item.suspicious || !matchIngredient(item.name), corrected: false };
       }), { date: result.date ?? at.date, time: result.time ?? at.time });
     },
   };

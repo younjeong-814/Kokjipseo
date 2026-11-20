@@ -10,7 +10,7 @@ import { asset } from '../../lib/assets';
 import { formatMonthDay, toDateKey } from '../../lib/date';
 import { particle } from '../../lib/korean';
 import { conditionLabels, storageLocations, type Ingredient, type IngredientCondition } from './repository';
-import { ingredientImage } from './IngredientCard';
+import { IngredientThumbnail } from './IngredientThumbnail';
 import { deadlineDays, resolveExpiry, isFood } from './expiry';
 
 function ConditionSheet({ item, onClose, onUpdate }: { item: Ingredient; onClose: () => void; onUpdate: (status: IngredientCondition) => void }) {
@@ -76,7 +76,7 @@ export function IngredientDetailPage({ item, onBack, onEdit, onSave, onCondition
   return <main className={`ingredient-detail${automated ? ' automated' : ''}`} style={{ '--detail-thumb': `url("${asset('detail-slider-thumb.svg')}")` } as CSSProperties} data-figma-node={automated ? '5842:5091' : '5833:19874'}>
     <SubHeader title={`${noun} 상세`} backIcon="manual-back.svg" onBack={onBack} />
     <div className="ingredient-detail-content">
-      <CardShell className="detail-summary"><img src={asset(ingredientImage(item))} alt="" /><div><h2>{item.name}</h2>{days !== null && <span className={`detail-deadline${days <= 0 ? ' expired' : ''}`}>{days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : `D+${-days}`}</span>}<p>{item.category}</p></div></CardShell>
+      <CardShell className="detail-summary"><IngredientThumbnail item={item} /><div><h2>{item.name}</h2>{days !== null && <span className={`detail-deadline${days <= 0 ? ' expired' : ''}`}>{days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : `D+${-days}`}</span>}<p>{item.category}</p></div></CardShell>
       <section className="detail-remaining"><h2>남은 양</h2><div className="detail-remaining-headline"><strong>{remainingPercent}%</strong><b>남았어요</b></div><input aria-label="남은 양" type="range" min="0" max="100" step="25" value={remainingPercent} onChange={event => { setRemaining(Number(event.target.value)); setRemainingAdjusted(true); }} style={{ '--remaining': `${remainingPercent}%` } as CSSProperties} /><div className="detail-range-labels">{[0,25,50,75,100].map(value => <span key={value}>{value}%</span>)}</div></section>
       <section className="detail-info"><h2>보관 위치</h2><div className="detail-storage" role="group" aria-label="보관 위치">{storageLocations.map(value => <button type="button" key={value} aria-pressed={storage === value} onClick={() => { setStorage(value); if (dateSource === 'automatic' || !date) { const resolved = resolveExpiry({ ...item, storage: value, date: '' }, item); setDate(resolved.date); setDateSource(resolved.dateSource); } }}>{value}</button>)}</div>
         <div className="detail-info-row"><h2>소비 권장일</h2><button className="detail-date" onClick={() => setOverlay('date')}>{date ? formatMonthDay(date) : '날짜 선택'}<img src={asset('detail-calendar.svg')} alt="" /></button></div>

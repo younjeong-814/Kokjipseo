@@ -9,6 +9,7 @@ import { asset } from '../../lib/assets';
 import { formatMonthDay } from '../../lib/date';
 import type { Navigate } from '../../prototype/flow';
 import type { useRecognition } from './useRecognition';
+import { IngredientThumbnail } from '../ingredients/IngredientThumbnail';
 
 type Props = { navigate: Navigate; recognition: ReturnType<typeof useRecognition>; onRegister: () => void };
 
@@ -43,7 +44,7 @@ export function RecognitionResultPage({ navigate, recognition, onRegister }: Pro
           {recognition.items.map((item, index) => <Fragment key={item.id}>
             {index > 0 && <div className="recognition-divider" />}
             <div className="recognized-row" data-item-id={item.id}>
-              <img className="recognized-thumbnail" src={asset(item.image)} alt="" />
+              <IngredientThumbnail className="recognized-thumbnail" item={item} />
               <div className="recognized-name"><input ref={element => { nameInputs.current[item.id] = element; }} className="recognized-name-input" aria-label={`${item.name} 이름`} readOnly={editingId !== item.id} tabIndex={editingId === item.id ? 0 : -1} value={editingId === item.id ? draftName : item.name} maxLength={60} enterKeyHint="done" onChange={event => setDraftName(event.target.value)} onBlur={() => finishName(item.id)} onKeyDown={event => {
                 if (event.nativeEvent.isComposing) return;
                 if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }

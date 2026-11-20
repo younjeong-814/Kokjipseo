@@ -116,6 +116,20 @@ test('shared thumbnails cover the five food categories and legacy ingredient lab
   }
 });
 
+test('thumbnail follows current category, supports legacy labels and never uses stale image state', () => {
+  const { ingredientImage, categoryImage } = load('../src/features/ingredients/images.ts');
+  const item = { category: '유제품', image: 'thumb-fruit.png' };
+  assert.equal(ingredientImage(item), 'thumb-dairy.png');
+  item.category = '채소';
+  assert.equal(ingredientImage(item), 'thumb-vegetable.png');
+  assert.equal(categoryImage('곡물·두부'), 'thumb-bean.png');
+  assert.equal(categoryImage(' 두부 · 콩류 '), 'thumb-bean.png');
+  assert.equal(categoryImage('알 수 없는 분류'), 'thumb-ingredients-etc.png');
+  for (const category of ['육류', '과일', '채소', '두부·콩류', '유제품', '수산물', '조미료·소스', '가공식품', '기타 식재료', '밀키트', '반찬', '국·찌개', '배달음식', '기타 음식']) {
+    assert.ok(readFileSync(new URL(`../public/assets/${categoryImage(category)}`, import.meta.url)).length > 0, category);
+  }
+});
+
 // 브랜드·수식어가 붙어도 분류 규칙의 키워드가 DB에 있으면 그 행을 쓴다. 없으면 추측하지 않는다.
 test('recommendation lookup falls back to the classification keyword', () => {
   for (const [name, expected] of [['두부', '두부'], ['풀무원 국산콩 두부', '두부'], ['서울우유', '우유'], ['딸기우유', '우유'], ['김치찌개', null], ['한돈 삼겹살', null], ['키친타월', null]]) {
