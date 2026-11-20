@@ -1,4 +1,5 @@
 import { isFood, resolveExpiry, foodCategories, ingredientCategories, categoryKind } from './expiry';
+import { recognizedCategory } from './classify';
 export const INGREDIENTS_KEY = 'kokjipseo.manual-ingredients.v1';
 export const categories = [...ingredientCategories, ...foodCategories] as const;
 export const storageLocations = ['냉장','냉동','실온'] as const;
@@ -39,7 +40,13 @@ export function loadIngredients(storage: LocalStorage): Ingredient[] {
     if (item.remainingPercent !== undefined && ![0,25,50,75,100].includes(item.remainingPercent)) throw new Error('Invalid remaining amount');
     if (item.conditionHistory !== undefined && (!Array.isArray(item.conditionHistory) || !item.conditionHistory.every((record: ConditionRecord) => record && typeof record.id === 'string' && typeof record.recordedAt === 'string' && Number.isFinite(Date.parse(record.recordedAt)) && conditionLabels.includes(record.status)))) throw new Error('Invalid history');
   }
-  return (data as Ingredient[]).map(item => item.date ? item : resolveExpiry(item, item));
+  return (data as Ingredient[]).map(item => {
+    // 이미 저장된 자동 인식 결과에도 확인된 상품 분류 수정을 적용한다.
+    // 사용자가 직접 등록한 카테고리와 기존 날짜·수량·관리 이력은 유지한다.
+    const category = item.source === 'ocr' || item.source === 'camera' ? recognizedCategory(item.name, item.category) : item.category;
+    const current = category === item.category ? item : { ...item, category, kind: categoryKind(category) ?? item.kind };
+    return current.date ? current : resolveExpiry(current, current);
+  });
 }
 
 export function saveIngredient(storage: LocalStorage, draft: IngredientDraft, id?: string): Ingredient[] {
@@ -120,7 +127,9 @@ export function updateIngredientInfo(storage: LocalStorage, id: string, patch: {
 export function saveRecognizedIngredients(storage: LocalStorage, drafts: IngredientDraft[]): Ingredient[] {
   const items = loadIngredients(storage);
   const now = new Date().toISOString();
-  const added = drafts.map(draft => {
+  const added = drafts.map(input => {
+    const category = recognizedCategory(input.name, input.category);
+    const draft = category === input.category ? input : { ...input, category, kind: categoryKind(category) };
     const invalid = validateDraft(draft);
     if (invalid) throw new Error(invalid);
     return { ...resolveExpiry(draft, undefined, new Date(now)), kind: draft.kind ?? (isFood(draft) ? 'food' as const : 'ingredient' as const), name: draft.name.trim(), unit: draft.unit.trim(), source: draft.source ?? 'camera', id: crypto.randomUUID(), createdAt: now, updatedAt: now, remainingPercent: 100, conditionHistory: [] };

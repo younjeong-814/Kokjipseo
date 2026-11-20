@@ -91,6 +91,23 @@ function storage() {
 }
 const draft = { name: ' 시금치 ', category: '채소', storage: '냉장', quantity: 2, unit: '봉', date: '2026-10-20' };
 
+test('existing recognized prepared foods get correct categories without changing dates or management history', () => {
+  for (const [name, wrong, expected] of [['계란 꼬치 햄 치즈 맛','유제품','가공식품'],['득템 피자 콰트로 치즈','유제품','가공식품'],['직화 순살 닭다리','육류','기타 음식']]) {
+    for (const source of ['ocr','camera','manual',undefined]) {
+      const item = { ...draft, name, category:wrong, source, kind:'ingredient', id:'saved', createdAt:'2026-11-20T00:00:00Z', updatedAt:'2026-11-20T00:00:00Z', remainingPercent:50, conditionHistory:[] };
+      const db=storage();db.setItem(INGREDIENTS_KEY,JSON.stringify([item]));
+      const [loaded]=loadIngredients(db);
+      assert.equal(loaded.category,source==='ocr'||source==='camera'?expected:wrong);
+      assert.equal(loaded.date,item.date);assert.equal(loaded.remainingPercent,50);
+      assert.equal(loaded.updatedAt,item.updatedAt);assert.deepEqual(loaded.conditionHistory,[]);
+      assert.equal(JSON.parse(db.getItem(INGREDIENTS_KEY))[0].category,wrong,'reading never silently rewrites cloud storage');
+    }
+    const db=storage();
+    const [added]=exports.saveRecognizedIngredients(db,[{...draft,name,category:wrong,source:'camera'}]);
+    assert.equal(added.category,expected);
+  }
+});
+
 test('list deletion keeps expired and unexpired items out of consumption and disposal history', () => {
   const db = storage();
   const { takeIngredient, restoreIngredient } = exports;

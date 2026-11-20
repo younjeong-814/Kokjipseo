@@ -1,7 +1,7 @@
 import type { PhotoRecognitionItem } from './photoApi';
 import { useState } from 'react';
 import type { ReceiptResult } from '../receipt/parseReceipt';
-import { classifyIngredient, matchIngredient } from '../ingredients/classify';
+import { classifyIngredient, matchIngredient, recognizedCategory } from '../ingredients/classify';
 
 export type RecognizedItem = { id: number; name: string; quantity: number; category: string; error: boolean; corrected: boolean };
 
@@ -44,13 +44,13 @@ export function useRecognition() {
     showDetected: (names: (string | PhotoRecognitionItem)[]) => {
       setSource('camera');
       start(names.map((value, id) => {
-        if (typeof value !== 'string') return {...value,id,quantity:1,error:!matchIngredient(value.name),corrected:false};
+        if (typeof value !== 'string') return {...value,category:recognizedCategory(value.name,value.category),id,quantity:1,error:!matchIngredient(value.name),corrected:false};
         const name = value;
         const category = classifyIngredient(name);
         return { id, name, quantity: 1, category, error: !matchIngredient(name), corrected: false };
       }), now());
     },
-    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,id,quantity:1,error:!matchIngredient(item.name),corrected:false})),now());},
+    showPhoto: (results:PhotoRecognitionItem[]) => {setSource('camera');start(results.map((item,id)=>({...item,category:recognizedCategory(item.name,item.category),id,quantity:1,error:!matchIngredient(item.name),corrected:false})),now());},
     showReceipt: (result: ReceiptResult) => {
       const at = now();
       setSource('receipt');

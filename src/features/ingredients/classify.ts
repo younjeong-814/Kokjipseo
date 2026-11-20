@@ -80,6 +80,21 @@ export const entries = Object.entries(dictionary).flatMap(([category, keywords])
 // '액'이 붙으면 조미료가 되는 원재료 카테고리.
 const EXTRACT_SOURCES = ['수산물', '육류', '채소', '과일'];
 
+/** 상품 종류 뒤에 붙은 맛 표기가 원재료 분류를 덮어쓰지 않게 한다. */
+export function preparedProductCategory(name: string): string | undefined {
+  const text = name.replace(/\s+/g, '');
+  if (/계란꼬치|달걀꼬치/.test(text)) return '가공식품';
+  // 피자치즈는 요리 재료다. '피자 콰트로 치즈'처럼 완성품 종류가 앞에 있는 경우와 구별한다.
+  if (/피자(?:콰트로|쿼트로|포테이토|불고기|페퍼로니|고르곤졸라)/.test(text)) return '가공식품';
+  if (/직화.*(?:순살)?닭다리/.test(text)) return '기타 음식';
+  return undefined;
+}
+
+/** 모델 카테고리는 유지하되 확인된 완성품/맛 표기 충돌은 바로잡는다. */
+export function recognizedCategory(name: string, category: string): string {
+  return preparedProductCategory(name) ?? category;
+}
+
 /** 이름에서 규칙상 이기는 키워드와 그 카테고리. 소비권장일 DB를 찾을 때도 이 키워드를 쓴다. */
 export function matchIngredient(name: string): { keyword: string; category: string } | undefined {
   // OCR의 띄어쓰기와 브랜드 안의 원재료 이름 때문에 상품 정체가 바뀌는 실제 사례.
@@ -134,6 +149,8 @@ export function recipeSearchKeyword(name: string): string {
 export function classifyIngredient(name: string): string {
   const text = name.toLowerCase();
   if (MEALKIT.some(keyword => text.includes(keyword))) return '밀키트';
+  const productCategory = preparedProductCategory(name);
+  if (productCategory) return productCategory;
   const match = matchIngredient(name);
   if (match && COOKED_PREFIX.some(prefix => text.includes(prefix)) && COOKED_TARGETS.includes(match.category) && !EGGS.includes(match.keyword)) return '기타 음식';
   return match?.category ?? FALLBACK_CATEGORY;
