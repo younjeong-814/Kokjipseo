@@ -5,6 +5,11 @@ type Source = typeof sources[number];
 const validSource = (value: string | null): value is Source => sources.some(source => source === value);
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
+/** 메일 유입이나 과거 참여 기록은 테스트 UI를 켤 권한이 아니다. */
+export function isUTEntry(search: string): boolean {
+  return ['pickply', 'instagram', 'community', 'platform'].includes(new URLSearchParams(search).get('src') ?? '');
+}
+
 /** Attribution only: the server must still validate digest ownership. */
 export function createEntryContext(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) {
   let source: Source | null = null;

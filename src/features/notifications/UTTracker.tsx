@@ -5,7 +5,7 @@ import {UTWelcomeSheet} from './UTWelcomeSheet';
 import {UTSecondSurvey} from './UTSecondSurvey';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenName=/^[a-z0-9-]{1,40}$/;
-import {captureEntryContext} from './entryContext';
+import {captureEntryContext,isUTEntry} from './entryContext';
 const appKeys=new Map<string,string>();
 const clickKeys=new Map<string,string>();
 // 모듈 단위로 둬서 개발 모드(StrictMode)의 effect 재실행에도 같은 화면을 두 번 남기지 않는다.
@@ -50,6 +50,6 @@ export function UTTracker({userId,initialIngredientCount}:{userId:string;initial
     report();window.addEventListener('hashchange',report);window.addEventListener('kokjipseo:notification-preferences-changed',report);
     return()=>{window.removeEventListener('hashchange',report);window.removeEventListener('kokjipseo:notification-preferences-changed',report);};
   },[userId]);
-  if(!entrySource())return null;
+  if(!isUTEntry(window.location.search))return null;
   return <><UTWelcomeSheet key={`welcome:${userId}`} userId={userId}/><UTConsentSheet key={`survey:${userId}`} userId={userId} initialIngredientCount={initialIngredientCount}/><UTSecondSurvey key={userId} userId={userId}/></>;
 }

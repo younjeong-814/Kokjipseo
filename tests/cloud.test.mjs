@@ -11,7 +11,7 @@ const {parsePhotoResult,recognizePhoto}=load('../supabase/functions/_shared/phot
 const {configureExternalRequests,requestExternal}=load('../src/features/cloud/externalRequests.ts');
 const {ensureAnonymousSession}=load('../src/features/cloud/anonymous.ts');
 const {normalizeVerificationCode,remainingSeconds,RESEND_WAIT_MS}=load('../src/features/notifications/verificationInput.ts');
-const {createEntryContext}=load('../src/features/notifications/entryContext.ts');
+const {createEntryContext,isUTEntry}=load('../src/features/notifications/entryContext.ts');
 
 test('platform first survey stays hidden on registration and pending reload; other campaign surveys remain enabled',()=>{
  const previous={window:globalThis.window,localStorage:globalThis.localStorage};
@@ -41,6 +41,7 @@ test('second survey does not prompt on email arrival or old update flags; curren
  const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
  const previous={window:globalThis.window,document:globalThis.document,sessionStorage:globalThis.sessionStorage};
  const target=new EventTarget(), doc=new EventTarget();
+ target.location={search:'?src=instagram'};
  globalThis.window=target;globalThis.document=doc;globalThis.sessionStorage=storage;
  let effect,cleanup,calls=0,invites=[];
  const source=readFileSync(new URL('../src/features/notifications/UTSecondSurvey.tsx',import.meta.url),'utf8')
@@ -50,7 +51,7 @@ test('second survey does not prompt on email arrival or old update flags; curren
  const mocks={
   react:{useEffect:fn=>{effect=fn;},useState:init=>[typeof init==='function'?init():init,value=>{if(value)invites.push(value);} ]},
   '../cloud/client':{supabase:{rpc:async(_name,args)=>{calls++;assert.equal(args.p_updated,true);return {data:'participation-code',error:null};}}},
-  './entryContext':{captureEntryContext:()=>({source:'email',digest})},
+  './entryContext':{captureEntryContext:()=>({source:'email',digest}),isUTEntry},
   './useSurveyTracking':{useSurveyTracking:()=>({})},
  };
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -64,10 +65,27 @@ test('second survey does not prompt on email arrival or old update flags; curren
   cleanup();
   // Reload/re-entry must require a new update even if the old persistent flag remains.
   exports.UTSecondSurvey({userId:'owner'});cleanup=effect();await flush();assert.equal(calls,1);
+  cleanup();
+  // Default URL must stay silent even with an email digest, old tester state,
+  // and a fresh management event. No survey RPC or invitation is allowed.
+  for(const search of ['', '?source=email', '?src=email']){
+   target.location.search=search;
+   exports.UTSecondSurvey({userId:'owner'});cleanup=effect();
+   target.dispatchEvent(new Event('hashchange'));
+   target.dispatchEvent(new Event('kokjipseo:ingredient-status-updated'));
+   await flush();
+   assert.equal(calls,1,search);assert.equal(invites.length,1,search);
+   cleanup?.();
+  }
  }finally{
   cleanup?.();
   for(const [key,value] of Object.entries(previous)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}
  }
+});
+
+test('test UI requires an explicit recruitment URL, never ordinary email attribution',()=>{
+ for(const search of ['', '?source=email', '?src=email', '?src=unknown'])assert.equal(isUTEntry(search),false,search);
+ for(const channel of ['instagram','community','platform','pickply'])assert.equal(isUTEntry(`?src=${channel}`),true,channel);
 });
 
 test('email entry survives old campaign params, route changes, late survey mount and reload',()=>{

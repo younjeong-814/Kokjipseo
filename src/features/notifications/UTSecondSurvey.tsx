@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { OverlayDialog } from '../../components/OverlayDialog';
 import { supabase } from '../cloud/client';
 import {useSurveyTracking} from './useSurveyTracking';
-import {captureEntryContext} from './entryContext';
+import {captureEntryContext,isUTEntry} from './entryContext';
 import surveyIcon from '../../assets/ut-survey/icon-survey.svg';
 import closeIcon from '../../assets/ut-survey/icon-close.svg';
 import noticeIcon from '../../assets/ut-survey/icon-exclamation.svg';
@@ -17,15 +17,16 @@ export function notifyIngredientStatusUpdated() {
 }
 
 export function UTSecondSurvey({ userId }: { userId: string }) {
+  const testEntry = isUTEntry(window.location.search);
   const [preview] = useState(() => import.meta.env.DEV
     ? new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('survey-preview')
     : null);
   const [invitation, setInvitation] = useState<{ code: string | null; updated: boolean; digest?:string } | null>(() =>
     preview === 'updated' || preview === 'followup' ? { code: null, updated: preview === 'updated' } : null);
-  const tracking=useSurveyTracking(2,invitation?.digest??null,!preview);
+  const tracking=useSurveyTracking(2,invitation?.digest??null,testEntry&&!preview);
   useEffect(() => {
     const client = supabase;
-    if (!client || preview === 'updated' || preview === 'followup') return;
+    if (!testEntry || !client || preview === 'updated' || preview === 'followup') return;
     const shown = new Set<string>();
     const storageKey = `kokjipseo:second-survey-digest:${userId}`;
     let digest: string | null = null;
@@ -91,9 +92,9 @@ export function UTSecondSurvey({ userId }: { userId: string }) {
       document.removeEventListener('visibilitychange', refresh);
       window.removeEventListener(updatedEvent, update);
     };
-  }, [preview, userId]);
+  }, [preview, userId, testEntry]);
 
-  if (!invitation) return null;
+  if (!testEntry || !invitation) return null;
   const close = () => setInvitation(null);
   const form = new URL(surveyUrl);
   const linked=Boolean(tracking.code&&entry&&/^entry\.\d+$/.test(entry));
